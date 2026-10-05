@@ -1,0 +1,5 @@
+[submodule "toolchain"]
+	path = toolchain
+	url = https://github.com/rhu1/scribble-gt-scala.git
+	branch = artifact
+	shallow = true

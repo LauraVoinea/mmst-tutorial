@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mMST — mixed-choice session types</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23086788'/%3E%3Cpath d='M6 9h20M6 23h20' stroke='%23fff1d0' stroke-opacity='.45' stroke-width='1.5'/%3E%3Cpath d='M9 9l14 14' stroke='%2306aed5' stroke-width='3'/%3E%3Cpath d='M9 23l14-14' stroke='%23f0c808' stroke-width='3'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="theme.css">
+<script src="shared.js"></script>
+<style>
+/* panes: one screen when wide, stacked when narrow */
+body{height:100vh}
+main{flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+@media (max-width:900px){
+  body{height:auto}
+  main{grid-template-columns:1fr; grid-template-rows:minmax(260px,50vh) auto}
+}
+.pane{display:flex; flex-direction:column; min-width:0; min-height:0}
+.pane + .pane{border-left:1px solid var(--rule)}
+@media (max-width:900px){ .pane + .pane{border-left:0; border-top:1px solid var(--rule)} }
+.pane-head{
+  height:46px; flex:none; display:flex; align-items:center; gap:.6rem; padding:0 clamp(12px,2vw,18px);
+  border-bottom:1px solid var(--rule); background:var(--head);
+  font-family:var(--mono); font-size:.68rem; letter-spacing:.13em; text-transform:uppercase; color:var(--head-ink);
+}
+.pane-head .right{margin-left:auto; display:flex; gap:.5rem; align-items:center; text-transform:none; letter-spacing:0}
+.pane-head .file{text-transform:none; letter-spacing:.02em; color:var(--ink-3)}
+.pane-head .status{font-size:.7rem; color:var(--ink-3)}
+.pane-head .btn.primary{padding:.34rem .8rem}
+
+/* view tabs */
+.tabs{display:inline-flex; border:1px solid var(--rule-2); border-radius:5px; overflow:hidden; background:var(--paper)}
+.tabs button{
+  font-family:var(--mono); font-size:.74rem; letter-spacing:.04em; padding:.32rem .75rem;
+  border:0; background:transparent; color:var(--ink-2); cursor:pointer;
+}
+.tabs button + button{border-left:1px solid var(--rule-2)}
+.tabs button[aria-selected="true"]{background:var(--tab-on); color:var(--tab-on-ink)}
+.tabs button:hover:not([aria-selected="true"]){color:var(--accent)}
+.tabs button[disabled]{opacity:.55; cursor:progress}
+
+.pane-body{flex:1; overflow:auto; min-height:0}
+.pane-body.editor{position:relative; overflow:hidden}
+.pane-body.editor pre.hl, .pane-body.editor textarea{
+  position:absolute; inset:0; margin:0; width:100%; height:100%; padding:1rem clamp(12px,2vw,18px);
+  font-family:var(--mono); font-size:13.5px; line-height:1.62; tab-size:4;
+  white-space:pre; overflow:auto; border:0;
+}
+.pane-body.editor pre.hl{color:var(--ink); background:var(--paper); pointer-events:none}
+.pane-body.editor pre.hl code{white-space:inherit; font:inherit}
+.pane-body.editor textarea{resize:none; outline:none; background:transparent; color:transparent; caret-color:var(--ink)}
+
+/* modes */
+main[hidden], header select[hidden]{display:none}
+.modes{display:inline-flex; flex:none; border:1px solid var(--bar-rule); border-radius:5px; overflow:hidden}
+.modes button{
+  font-family:var(--mono); font-size:.72rem; letter-spacing:.06em; padding:.38rem .85rem;
+  border:0; background:transparent; color:var(--bar-ink-2); cursor:pointer;
+}
+.modes button + button{border-left:1px solid var(--bar-rule)}
+.modes button[aria-selected="true"]{background:var(--bar-ink); color:var(--bar); font-weight:700}
+.modes button:hover:not([aria-selected="true"]){color:var(--bar-ink); background:rgba(255,241,208,.12)}
+
+/* erlang mode */
+@media (max-width:900px){ #erlang-main{grid-template-rows:minmax(340px,62vh) auto} }
+.pane-head .file{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.pane-head .btn{white-space:nowrap}
+@media (max-width:600px){ .pane-head .btn:not(.primary){padding:.3rem .5rem; font-size:.7rem} }
+.pane-head select{font-family:var(--mono); font-size:.72rem; padding:.28rem 1.6rem .28rem .5rem; max-width:none}
+.erl-files{
+  flex:none; display:flex; flex-wrap:wrap; gap:.3rem; align-items:center;
+  padding:.5rem clamp(12px,2vw,18px); border-bottom:1px solid var(--rule); background:var(--paper);
+}
+.erl-files button{
+  font-family:var(--mono); font-size:.72rem; padding:.22rem .5rem; border-radius:3px; cursor:pointer;
+  border:1px solid var(--rule-2); background:var(--paper); color:var(--ink-2); white-space:nowrap;
+}
+.erl-files button:hover{border-color:var(--lhs); color:var(--lhs)}
+.erl-files button[aria-current="true"]{background:var(--lhs); border-color:var(--lhs); color:var(--paper)}
+.erl-files button.k4{border-style:dashed; color:var(--ink-3)}
+.erl-files button.k4[aria-current="true"]{border-style:solid; color:var(--paper)}
+.erl-files button.edited::after{content:" \2022"; color:var(--rhs); font-weight:700}
+.erl-files button.edited[aria-current="true"]::after{color:var(--hl)}
+.erl-files button.bad{border-color:var(--fail); color:var(--fail)}
+.erl-files button.bad[aria-current="true"]{background:var(--fail); border-color:var(--fail); color:var(--fail-on)}
+.erl-files .gap{width:.45rem; flex:none}
+.erl-files button.undo{border:0; background:none; color:var(--ink-3); padding:.22rem 0; margin-left:auto; text-decoration:underline; text-underline-offset:2px}
+@media (max-width:900px){ .erl-files{flex-wrap:nowrap; overflow-x:auto} }
+.pane-body.editor mark.eline{background:rgba(221,28,26,.16); color:inherit; border-radius:2px; box-shadow:0 0 0 2px rgba(221,28,26,.16)}
+
+.verdict .tag.wait{background:var(--hl); color:var(--hl-on)}
+.rc0{color:var(--lhs)} .rc1{color:var(--rhs)} .rc2{color:var(--ink-2)} .rc3{color:var(--ink-3)}
+.hintline .rc{font-family:var(--mono); font-size:.88em; font-weight:700}
+.msg a[data-protocol]{color:var(--lhs); text-decoration:underline; text-underline-offset:2px}
+.msg code{font-family:var(--mono); font-size:.88em; background:var(--sunk); padding:.08em .3em; border-radius:3px}
+.msg .msg-do{display:flex; flex-wrap:wrap; gap:.4rem .8rem; align-items:center; margin-top:.7rem; font-size:.84rem; color:var(--ink-3)}
+
+ul.erl-roles{list-style:none; margin:0 0 1.1rem; padding:0; max-width:46rem}
+ul.erl-roles li{display:flex; flex-wrap:wrap; align-items:baseline; gap:.15rem .9rem; padding:.45rem 0; border-bottom:1px solid var(--rule)}
+ul.erl-roles b{font-family:var(--mono); font-size:.82rem; min-width:7rem}
+ul.erl-roles .alias{font-weight:400; font-size:.72rem; color:var(--ink-3)}
+ul.erl-roles .st{font-family:var(--mono); font-size:.78rem; letter-spacing:.05em; font-weight:700}
+ul.erl-roles .st code{font-family:var(--mono); background:var(--sunk); padding:.05em .3em; border-radius:3px}
+ul.erl-roles li.finished .st{color:var(--pass)}
+ul.erl-roles li.waiting .st{color:var(--rhs)}
+ul.erl-roles li.crashed .st, ul.erl-roles li.failed .st{color:var(--fail)}
+ul.erl-roles .more{font-family:var(--mono); font-size:.76rem; color:var(--ink-2)}
+ul.erl-roles li.crashed .more, ul.erl-roles li.failed .more{flex-basis:100%; padding-left:7.9rem; word-break:break-word}
+@media (max-width:600px){ ul.erl-roles li.crashed .more, ul.erl-roles li.failed .more{padding-left:0} }
+
+button.loc{
+  font-family:var(--mono); font-size:.8rem; background:none; border:0; padding:0; cursor:pointer;
+  color:var(--fail); text-decoration:underline; text-underline-offset:2px;
+}
+ul.erl-roles button.loc{font-size:inherit; color:inherit}
+ul.erl-problems{list-style:none; margin:.3rem 0 1.1rem; padding:0; max-width:52rem}
+ul.erl-problems li{padding:.34rem 0; border-bottom:1px solid var(--rule); color:var(--ink); font-size:.88rem}
+ul.erl-problems code{font-family:var(--mono); font-size:.8rem}
+ul.erl-problems.warnings li{color:var(--ink-2)}
+ul.erl-problems.warnings button.loc{color:var(--rhs)}
+details.raw ul.erl-problems{margin-top:.6rem}
+
+.erl-logbar{display:flex; align-items:baseline; gap:1rem; margin:1.5rem 0 .5rem}
+.erl-logbar h3.sec{margin:0}
+.erl-logbar label{display:inline-flex; gap:.35rem; align-items:center; font-size:.8rem; color:var(--ink-2); cursor:pointer}
+.erl-logbar .n{color:var(--ink-3)}
+.erl-log{
+  font-family:var(--mono); font-size:.74rem; line-height:1.6; color:var(--ink);
+  background:var(--sunk); border:1px solid var(--rule); border-radius:4px; padding:.55rem 0;
+  overflow:auto; max-height:30rem;
+}
+.erl-log .ln, .erl-log summary{display:flex; gap:.8rem; padding:0 .9rem; white-space:pre; width:max-content; min-width:100%}
+.erl-log .who{flex:none; width:var(--who,8ch); text-align:right; font-weight:700; overflow:hidden; text-overflow:ellipsis}
+.erl-log .dbg{display:none}
+.erl-log.trace .dbg{display:flex}
+.erl-log .dbg .tx{color:var(--ink-3)}
+.erl-log details.rep summary{cursor:pointer; list-style:none; color:var(--fail)}
+.erl-log details.rep summary::-webkit-details-marker{display:none}
+.erl-log details.rep summary .tx::before{content:"\25B8  "}
+.erl-log details.rep[open] summary .tx::before{content:"\25BE  "}
+.erl-log details.rep pre{margin:.15rem .9rem .5rem calc(var(--who,8ch) + 1.7rem); font:inherit; white-space:pre; color:var(--ink-2)}
+.files-bar{display:flex; flex-wrap:wrap; gap:.5rem 1rem; align-items:center; justify-content:space-between;
+  padding:.8rem clamp(12px,2vw,18px) 0; color:var(--ink-2); font-size:.86rem}
+.files-bar code{font-family:var(--mono); font-size:.9em; background:var(--sunk); padding:.08em .3em; border-radius:3px}
+
+/* result */
+.result{padding:1rem clamp(12px,2vw,18px) 2.5rem}
+.verdict{
+  display:flex; align-items:baseline; gap:.7rem; margin:0 0 1rem; flex-wrap:wrap;
+  font-family:var(--mono); font-size:.78rem; letter-spacing:.1em; text-transform:uppercase;
+}
+.verdict .tag{padding:.16rem .5rem; border-radius:3px; font-weight:600}
+.verdict .tag.ok{background:var(--pass-fill); color:var(--pass-on)}
+.verdict .tag.no{background:var(--fail-fill); color:var(--fail-on)}
+.verdict .name{color:var(--ink-3); letter-spacing:.02em; text-transform:none; font-size:.8rem}
+
+ul.flags{list-style:none; margin:0 0 1.4rem; padding:0; max-width:34rem}
+ul.flags li{
+  display:flex; align-items:baseline; gap:.7rem; padding:.42rem 0;
+  border-bottom:1px solid var(--rule); font-family:var(--mono); font-size:.84rem;
+}
+ul.flags li b{min-width:2.2em; font-weight:600}
+ul.flags li .nm{color:var(--ink-2); font-family:var(--sans); font-size:.92rem}
+ul.flags li .dots{flex:1; border-bottom:1px dotted var(--rule-2); transform:translateY(-.25em)}
+ul.flags li .v{font-weight:600; letter-spacing:.08em}
+ul.flags li .v.p{color:var(--pass)} ul.flags li .v.f{color:var(--fail)}
+ul.flags li.first-fail b{color:var(--fail)}
+
+.culprit{
+  font-family:var(--mono); font-size:.8rem; color:var(--fail);
+  background:var(--sunk); border-left:2px solid var(--fail);
+  padding:.5rem .8rem; margin:-.9rem 0 1.4rem; max-width:34rem; border-radius:0 3px 3px 0;
+}
+.hintline{max-width:46rem; color:var(--ink-2); margin:0 0 1rem}
+.hintline b{color:var(--ink)}
+.hintline code{font-family:var(--mono); font-size:.9em; background:var(--sunk); padding:.1em .35em; border-radius:3px}
+
+ul.locals{list-style:none; margin:0; padding:0}
+ul.locals li{padding:.5rem 0; border-bottom:1px solid var(--rule)}
+ul.locals .role{
+  font-family:var(--mono); font-size:.7rem; letter-spacing:.1em; text-transform:uppercase; color:var(--lhs);
+  display:block; margin-bottom:.2rem;
+}
+ul.locals .ty{
+  font-family:var(--mono); font-size:.82rem; line-height:1.6; color:var(--ink);
+  overflow-x:auto; white-space:pre; display:block; padding-bottom:.25rem;
+}
+
+.msg{
+  max-width:46rem; background:var(--card); border:1px solid var(--rule);
+  border-left:3px solid var(--rhs); border-radius:4px; padding:.9rem 1.1rem; margin:0 0 1.2rem;
+  color:var(--ink-2);
+}
+.msg .t{
+  font-family:var(--mono); font-size:.68rem; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--rhs); margin-bottom:.4rem;
+}
+.msg.wait{border-left-color:var(--lhs)} .msg.wait .t{color:var(--lhs)}
+
+details.raw{margin-top:1.7rem}
+details.raw summary{
+  font-family:var(--mono); font-size:.7rem; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-3); cursor:pointer; list-style:none;
+}
+details.raw summary::-webkit-details-marker{display:none}
+details.raw summary::before{content:"\25B8 "; color:var(--rhs)}
+details.raw[open] summary::before{content:"\25BE "}
+pre.raw{
+  font-family:var(--mono); font-size:.72rem; line-height:1.55; background:var(--sunk);
+  border:1px solid var(--rule); border-radius:4px; padding:.8rem 1rem; margin:.6rem 0 0;
+  overflow-x:auto; max-height:22rem; color:var(--ink-2);
+}
+
+/* erlang view */
+.files{display:flex; gap:.3rem; flex-wrap:wrap; padding:.8rem clamp(12px,2vw,18px) 0}
+.files button{
+  font-family:var(--mono); font-size:.72rem; padding:.25rem .5rem; border-radius:3px;
+  border:1px solid var(--rule-2); background:var(--paper); cursor:pointer; color:var(--ink-2);
+}
+.files button.on{background:var(--lhs); border-color:var(--lhs); color:var(--paper)}
+
+/* efsm */
+.efsm{padding:.9rem clamp(12px,2vw,18px) 2rem}
+.efsm-top{display:flex; flex-wrap:wrap; gap:.6rem 1rem; align-items:center; justify-content:space-between; margin:0 0 .5rem}
+.efsm-roles{display:flex; gap:.3rem; flex-wrap:wrap}
+.efsm-roles button{
+  font-family:var(--mono); font-size:.74rem; padding:.28rem .7rem; border-radius:999px;
+  border:1px solid var(--rule-2); background:var(--paper); color:var(--ink-2); cursor:pointer;
+}
+.efsm-roles button[aria-selected="true"]{background:var(--lhs); border-color:var(--lhs); color:var(--paper)}
+.efsm-ctl{display:flex; gap:.35rem}
+.efsm-ctl .btn{padding:.3rem .6rem; font-size:.74rem}
+.efsm-note{color:var(--ink-2); font-size:.88rem; margin:.1rem 0 .7rem; max-width:46rem}
+.efsm-canvas{overflow-x:auto; border:1px solid var(--rule); border-radius:6px; background:var(--card)}
+.efsm-svg{display:block; height:auto; margin:0 auto}
+.efsm-svg .tr{fill:none; stroke-width:1.8; stroke-linecap:round}
+.efsm-svg .tr.lhs{stroke:var(--lhs)}
+.efsm-svg .tr.rhs{stroke:var(--rhs)}
+.efsm-svg .tr.none{stroke:var(--ink-3)}
+.efsm-svg .tr.jump{stroke:var(--ink-3); stroke-dasharray:5 4}
+.efsm-svg .tr.commit{stroke-width:2.4}
+.efsm-svg .tr.next{stroke-width:3.2}
+.efsm-svg .tr.hot{stroke:var(--hl); stroke-width:3.4}
+.efsm-svg .ah.lhs{fill:var(--lhs)}
+.efsm-svg .ah.rhs{fill:var(--rhs)}
+.efsm-svg .ah.none, .efsm-svg .ah.jump{fill:var(--ink-3)}
+.efsm-svg .hit{fill:none; stroke:transparent; stroke-width:16}
+.efsm-svg .hit.next{cursor:pointer}
+.efsm-svg .lbl rect{fill:var(--paper); stroke:var(--rule); stroke-width:1}
+.efsm-svg .lbl text{font-family:var(--mono); font-size:10.5px; text-anchor:middle; fill:var(--ink-2)}
+.efsm-svg .lbl .ev{font-weight:700; fill:var(--ink)}
+.efsm-svg .lbl.lhs .ev{fill:var(--lhs)}
+.efsm-svg .lbl.rhs .ev{fill:var(--rhs)}
+.efsm-svg .lbl.next{cursor:pointer}
+.efsm-svg .lbl.next rect{stroke:var(--hl-edge); stroke-width:2}
+.efsm-svg .lbl.hot rect{fill:var(--hl); stroke:var(--hl-edge)}
+.efsm-svg .lbl.hot text{fill:var(--hl-on)}
+.efsm-svg .note{font-family:var(--mono); font-size:10px; fill:var(--ink-3)}
+.efsm-svg .st .ring{fill:var(--paper); stroke:var(--ink-3); stroke-width:1.6}
+.efsm-svg .st.start .ring{stroke:var(--ink)}
+.efsm-svg .st.entry .ring{stroke:var(--accent); stroke-width:2.8}
+.efsm-svg .st .inner{fill:none; stroke:var(--ink-3); stroke-width:1.3}
+.efsm-svg .st.cont .ring{stroke-dasharray:4 3}
+.efsm-svg .st .halo{fill:none; stroke:var(--hl); stroke-width:3; opacity:0}
+.efsm-svg .sid{font-family:var(--mono); font-size:11.5px; font-weight:700; text-anchor:middle; fill:var(--ink)}
+.efsm-svg .badge{font-family:var(--mono); font-size:10px; text-anchor:middle; fill:var(--accent)}
+.efsm-svg .st.cur .ring{fill:var(--hl); stroke:var(--hl-edge); stroke-width:2.4}
+.efsm-svg .st.cur .sid{fill:var(--hl-on)}
+.efsm-svg .st.cur .halo{animation:efsmPulse 1.4s ease-out infinite; transform-box:fill-box; transform-origin:center}
+.efsm-svg .token{fill:var(--hl); stroke:var(--hl-on); stroke-width:1.6; opacity:0; pointer-events:none}
+.efsm-svg .token.on{opacity:1}
+@keyframes efsmPulse{ 0%{opacity:.85; transform:scale(.85)} 100%{opacity:0; transform:scale(1.35)} }
+@media (prefers-reduced-motion:reduce){ .efsm-svg .st.cur .halo{animation:none; opacity:.8} }
+.efsm-trace{display:flex; gap:.6rem; align-items:baseline; margin:.8rem 0 0; flex-wrap:wrap}
+.efsm-trace .lead{font-family:var(--mono); font-size:.66rem; letter-spacing:.14em; text-transform:uppercase; color:var(--accent)}
+.efsm-trace ol{list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:.3rem}
+.efsm-trace li{
+  font-family:var(--mono); font-size:.74rem; padding:.16rem .45rem; border-radius:3px;
+  background:var(--sunk); color:var(--ink); border-left:3px solid var(--ink-3);
+}
+.efsm-trace li.lhs{border-left-color:var(--lhs)}
+.efsm-trace li.rhs{border-left-color:var(--rhs)}
+.efsm-trace li.jump{border-left-style:dashed}
+.efsm-trace li.end, .efsm-trace li.empty{background:transparent; border-left:0; color:var(--ink-3)}
+.efsm-trace li.empty{font-family:var(--sans)}
+.efsm-legend{display:flex; flex-wrap:wrap; gap:.35rem 1.2rem; margin:1rem 0 0; font-size:.78rem; color:var(--ink-2)}
+.efsm-legend code{font-family:var(--mono); font-size:.92em; color:var(--ink)}
+.efsm-legend .sw{display:inline-block; width:22px; vertical-align:middle; margin-right:.4rem; border-top:2.5px solid var(--ink-3)}
+.efsm-legend .sw.lhs{border-top-color:var(--lhs)}
+.efsm-legend .sw.rhs{border-top-color:var(--rhs)}
+.efsm-legend .sw.jump{border-top-style:dashed}
+
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <svg width="42" height="20" viewBox="0 0 42 20" aria-hidden="true">
+      <line x1="0" y1="4" x2="42" y2="4" stroke="var(--rule-2)"></line>
+      <line x1="0" y1="16" x2="42" y2="16" stroke="var(--rule-2)"></line>
+      <line x1="8" y1="4" x2="30" y2="16" stroke="var(--lhs)" stroke-width="1.6"></line>
+      <line x1="12" y1="16" x2="34" y2="4" stroke="var(--rhs)" stroke-width="1.6"></line>
+    </svg>
+    <h1>mMST</h1>
+    <span class="sub"><a href="mixed-choice.html" title="Mixed choice and the four checks">mixed choice</a><a href="examples.html" title="The examples">examples</a></span>
+  </div>
+
+  <span class="modes" role="tablist" aria-label="Mode">
+    <button role="tab" data-mode="protocol" aria-selected="true" title="Check a protocol">Protocol</button>
+    <button role="tab" data-mode="erlang" aria-selected="false" title="Edit and run Erlang">Erlang</button>
+  </span>
+  <select id="examples" title="Load a protocol"><option value="">Load a protocol&hellip;</option></select>
+  <select id="erlsets" title="Open Erlang" hidden><option value="">Open Erlang&hellip;</option></select>
+  <button class="btn icon" id="theme" title="Light / dark" aria-label="Toggle light and dark">&#9680;</button>
+</header>
+
+<main id="protocol-main">
+  <section class="pane">
+    <div class="pane-head">
+      <span>protocol</span><span class="file" id="modname"></span>
+      <span class="right">
+        <span class="status" id="status" aria-live="polite"></span>
+        <button class="btn primary" id="check" title="Validate and project">Check <kbd id="kbdhint"></kbd></button>
+      </span>
+    </div>
+    <div class="pane-body editor">
+      <pre class="hl" aria-hidden="true"><code id="hl"></code></pre>
+      <textarea id="src" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off"></textarea>
+    </div>
+  </section>
+
+  <section class="pane">
+    <div class="pane-head">
+      <span id="resultTitle">checks</span>
+      <span class="right">
+        <span class="tabs" role="tablist" aria-label="What to show">
+          <button role="tab" data-view="checks" aria-selected="true" title="Checks and local types">Checks</button>
+          <button role="tab" data-view="efsm" aria-selected="false" title="State machine per role">EFSM</button>
+          <button role="tab" data-view="erlang" aria-selected="false" title="Generated modules">Erlang</button>
+        </span>
+      </span>
+    </div>
+    <div class="pane-body" id="out"></div>
+  </section>
+</main>
+
+<main id="erlang-main" hidden>
+  <section class="pane">
+    <div class="pane-head">
+      <span>erlang</span><span class="file" id="erl-where"></span>
+      <span class="right">
+        <button class="btn" id="erl-reset" title="Revert this file" disabled>Reset file</button>
+        <button class="btn" id="erl-zip" title="Download as .zip">.zip</button>
+      </span>
+    </div>
+    <div class="erl-files" id="erl-files" aria-label="Files"></div>
+    <div class="pane-body editor">
+      <pre class="hl" aria-hidden="true"><code id="erl-hl"></code></pre>
+      <textarea id="erl-src" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="Erlang source"></textarea>
+    </div>
+  </section>
+
+  <section class="pane">
+    <div class="pane-head">
+      <span id="erl-title">run</span>
+      <span class="right">
+        <span class="status" id="erl-status" aria-live="polite"></span>
+        <select id="erl-secs" title="Run time">
+          <option value="1">1 s</option><option value="3" selected>3 s</option><option value="10">10 s</option>
+        </select>
+        <button class="btn primary" id="erl-run" title="Compile and run">Run <kbd class="kbd"></kbd></button>
+      </span>
+    </div>
+    <div class="pane-body" id="erl-out"></div>
+  </section>
+</main>
+
+<footer class="site" id="site-footer"></footer>
+
+<script src="efsm.js"></script>
+<script src="examples.js"></script>
+<script src="erlang.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  var SEED = [
+    "module Scratch;",
+    "",
+    "// B observes: it goes along with A (left) or times out (right).",
+    "// Both sides are live at once.",
+    "",
+    "global protocol Scratch(role A, role B, role C) {",
+    "    mixed {",
+    "        a1() from A to B;",
+    "        a2() from A to C;",
+    "        a3() from B to C;",
+    "        a4() from B to A;",
+    "        a5() from C to A;",
+    "    } or A -> B {",
+    "        TOa() from B to A;",
+    "        TOc() from B to C;",
+    "    }",
+    "}"
+  ].join("\n");
+
+  var FLAG_NAMES = window.MMST.checks;
+
+  function $(id){ return document.getElementById(id); }
+
+  var MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+  var src = $("src"), out = $("out"), status = $("status");
+  var tabs = Array.prototype.slice.call(document.querySelectorAll(".tabs button")), view = "checks";
+  function select(v){
+    view = v;
+    tabs.forEach(function(b){ b.setAttribute("aria-selected", b.getAttribute("data-view") === v ? "true" : "false"); });
+  }
+
+  function esc(s){ return String(s).replace(/[&<>]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;"}[c]; }); }
+  function show(html){ out.innerHTML = html; out.scrollTop = 0; }
+
+  function msg(kind, title, body){
+    return '<div class="result"><div class="msg' + (kind ? " " + kind : "") + '">' +
+           '<div class="t">' + esc(title) + '</div>' + esc(body) + '</div></div>';
+  }
+
+  function renderFlags(flags){
+    var order = ["WF","SD","CT","BA"], firstFail = null, html = '<ul class="flags">';
+    order.forEach(function(k){
+      var pass = flags[k];
+      if (!pass && firstFail === null) firstFail = k;
+      html += '<li' + (!pass && firstFail === k ? ' class="first-fail"' : '') + '>' +
+              '<b>' + k + '</b><span class="nm">' + FLAG_NAMES[k][0] + '</span>' +
+              '<span class="dots"></span>' +
+              '<span class="v ' + (pass ? "p" : "f") + '">' + (pass ? "PASS" : "FAIL") + '</span></li>';
+    });
+    return { html: html + "</ul>", firstFail: firstFail };
+  }
+
+  function render(r){
+    if (!r.flags) {
+      $("resultTitle").textContent = "not checked";
+      return show(msg("", r.code === "parse" ? "Syntax error" : "Not checked",
+                      r.error || "No result.") +
+                  (r.raw ? '' : ''));
+    }
+
+    var f = renderFlags(r.flags), h = '<div class="result">';
+    h += '<div class="verdict"><span class="tag ' + (r.ok ? "ok" : "no") + '">' +
+         (r.ok ? "valid" : "invalid") + '</span>' +
+         (r.protocol ? '<span class="name">' + esc(r.protocol) + '</span>' : '') + '</div>';
+    h += f.html;
+
+    if (!r.ok) {
+      if (r.culprit) h += '<div class="culprit">culprit: ' + esc(r.culprit) + '</div>';
+      var k = f.firstFail;
+      h += '<p class="hintline"><b>' + k + ' &mdash; ' + FLAG_NAMES[k][0] + '.</b> ' + FLAG_NAMES[k][1] + '</p>';
+      h += '<p class="hintline">Fix the first <b>FAIL</b>: one error can fail two checks.</p>';
+      $("resultTitle").textContent = "invalid";
+    } else {
+      h += '<h3 class="sec">local types</h3><ul class="locals">';
+      (r.locals || []).forEach(function(l){
+        h += '<li><span class="role">' + esc(l.role) + '</span><code class="ty">' + esc(l.type) + '</code></li>';
+      });
+      h += '</ul><p class="hintline" style="margin-top:1.2rem"><code>&#8853;</code> sends' +
+           ' &nbsp;&middot;&nbsp; <code>&amp;</code> receives' +
+           ' &nbsp;&middot;&nbsp; <code>&#9655;</code> between the two sides of a mixed choice</p>';
+      $("resultTitle").textContent = "valid";
+    }
+
+    if (r.raw) h += '<details class="raw"><summary>checker output</summary><pre class="raw">' + esc(r.raw) + '</pre></details>';
+    show(h + "</div>");
+  }
+
+  var generated = null;
+  function renderFiles(files){
+    if (!files || !files.length) return show(msg("", "Nothing generated", "No files."));
+    generated = files;
+    var h = '<div class="files-bar"><span>' + esc(moduleName() || "Generated") +
+            ': a <code>gen_</code> module per role, and callbacks to fill in.</span>' +
+            '<button class="btn" id="toErlang" title="Edit and run in Erlang mode">Edit and run &rarr;</button></div>';
+    h += '<div class="files">';
+    files.forEach(function(f, i){
+      h += '<button data-i="' + i + '"' + (i === 0 ? ' class="on"' : '') + '>' + esc(f.name) + '</button>';
+    });
+    h += '</div><pre class="code" id="fileBody">' + window.MMST.highlight(files[0].content, "erlang") + '</pre>';
+    show(h);
+    $("resultTitle").textContent = "generated erlang";
+    $("toErlang").addEventListener("click", function(){
+      window.MMST.erlang.openGenerated(moduleName() || "Scratch", generated);
+      setMode("erlang");
+    });
+    Array.prototype.forEach.call(out.querySelectorAll(".files button"), function(b){
+      b.addEventListener("click", function(){
+        Array.prototype.forEach.call(out.querySelectorAll(".files button"), function(x){ x.classList.remove("on"); });
+        b.classList.add("on");
+        $("fileBody").innerHTML = window.MMST.highlight(files[+b.dataset.i].content, "erlang");
+      });
+    });
+  }
+
+  function renderEFSMPane(machines){
+    if (!machines || !machines.length) return show(msg("", "Nothing to show", "No EFSMs."));
+    window.MMST.efsm.render(out, machines);
+    out.scrollTop = 0;
+    $("resultTitle").textContent = "efsm";
+  }
+
+  function post(path, body){
+    return fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    }).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    });
+  }
+
+  function offline(e){
+    $("resultTitle").textContent = "offline";
+    show(msg("", "Offline",
+      "The server is unreachable. Your protocol is still in the editor; ./mMST.sh checks it locally. (" + e.message + ")"));
+  }
+
+  function busy(on, label){
+    $("check").disabled = on;
+    tabs.forEach(function(b){ b.disabled = on; });
+    status.textContent = on ? (label || "checking…") : "";
+  }
+
+  function check(){
+    shown = true;
+    select("checks");
+    busy(true);
+    $("resultTitle").textContent = "checking";
+    show(msg("wait", "Checking", ""));
+    post("/api/validate", { source: src.value }).then(render).catch(offline)
+      .then(function(){ busy(false); }, function(){ busy(false); });
+  }
+
+  function generate(){
+    shown = true;
+    select("erlang");
+    busy(true, "generating…");
+    $("resultTitle").textContent = "generating";
+    show(msg("wait", "Generating", ""));
+    post("/api/generate", { source: src.value })
+      .then(function(r){ if (r.ok && r.files) renderFiles(r.files); else render(r); })
+      .catch(offline).then(function(){ busy(false); }, function(){ busy(false); });
+  }
+
+  function showEFSMs(){
+    shown = true;
+    select("efsm");
+    busy(true, "computing…");
+    $("resultTitle").textContent = "computing";
+    show(msg("wait", "Computing", ""));
+    post("/api/efsm", { source: src.value })
+      .then(function(r){ if (r.ok && r.machines) renderEFSMPane(r.machines); else render(r); })
+      .catch(offline).then(function(){ busy(false); }, function(){ busy(false); });
+  }
+
+  function moduleName(){
+    var m = /^\s*module\s+([A-Za-z_][A-Za-z0-9_]*)\s*;/m.exec(src.value);
+    return m ? m[1] : null;
+  }
+  function syncName(){
+    var m = moduleName();
+    $("modname").textContent = m ? m + ".scr" : "no module declaration";
+    $("modname").style.color = m ? "" : "var(--fail)";
+  }
+
+  var hl = document.getElementById("hl");
+  function syncHighlight(){ hl.innerHTML = window.MMST.highlight(src.value, "scribble") + "\n"; }
+
+  function decode(s){
+    try { return decodeURIComponent(escape(atob(s.replace(/-/g,"+").replace(/_/g,"/")))); }
+    catch (e) { return null; }
+  }
+
+  $("check").addEventListener("click", check);
+  var VIEWS = { checks: check, efsm: showEFSMs, erlang: generate };
+  tabs.forEach(function(b){ b.addEventListener("click", function(){ VIEWS[b.getAttribute("data-view")](); }); });
+  src.addEventListener("input", syncName);
+  src.addEventListener("input", syncHighlight);
+  src.addEventListener("scroll", function(){
+    var pre = hl.parentElement;
+    pre.scrollTop = src.scrollTop; pre.scrollLeft = src.scrollLeft;
+  });
+
+  // The draft survives a visit to the other pages.
+  var DRAFT = "mmst.draft";
+  function saveDraft(){ try { sessionStorage.setItem(DRAFT, src.value); } catch (e) {} }
+  function loadDraft(){ try { return sessionStorage.getItem(DRAFT); } catch (e) { return null; } }
+  src.addEventListener("input", saveDraft);
+  window.addEventListener("pagehide", saveDraft);
+
+  src.addEventListener("keydown", function(e){
+    if (e.key === "Tab" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      e.preventDefault();
+      src.setRangeText("    ", src.selectionStart, src.selectionEnd, "end");
+      syncName();
+      syncHighlight();
+    }
+  });
+  document.addEventListener("keydown", function(e){
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+      e.preventDefault();
+      if (mode === "erlang") window.MMST.erlang.run(); else check();
+    }
+  });
+
+  // Two modes; the Erlang mode generates from the protocol editor.
+  var mode = "protocol", shown = false;
+  var modeButtons = Array.prototype.slice.call(document.querySelectorAll(".modes button"));
+  function setMode(m, want){
+    var was = mode;
+    mode = m;
+    $("protocol-main").hidden = m !== "protocol";
+    $("erlang-main").hidden = m !== "erlang";
+    $("examples").hidden = m !== "protocol";
+    $("erlsets").hidden = m !== "erlang";
+    modeButtons.forEach(function(b){ b.setAttribute("aria-selected", b.getAttribute("data-mode") === m ? "true" : "false"); });
+    if (m === "erlang") return window.MMST.erlang.enter(want);
+    if (was === "erlang") window.MMST.erlang.leave();
+    history.replaceState(null, "", $("examples").value ? "#ex=" + encodeURIComponent($("examples").value)
+                                                       : location.pathname + location.search);
+    if (!shown) check();
+  }
+  modeButtons.forEach(function(b){ b.addEventListener("click", function(){ setMode(b.getAttribute("data-mode")); }); });
+
+  // Menu: the exercise folders, then the examples examples.js picks.
+  var byId = {}, sel = $("examples");
+  function fillMenu(list){
+    var E = window.MMST.examples;
+    list.forEach(function(x){ byId[x.id] = x; });
+    (E ? E.arrange(list, false) : [{ group: "Protocols", items: list }]).forEach(function(g){
+      if (!g.items.length) return;
+      var og = document.createElement("optgroup");
+      og.label = g.group;
+      g.items.forEach(function(x){
+        var o = document.createElement("option");
+        o.value = x.id; o.textContent = E ? E.title(x.id) : x.id;
+        og.appendChild(o);
+      });
+      sel.appendChild(og);
+    });
+  }
+
+  // From the menu or #ex=NAME[&view=efsm]; the hash names it until the first edit.
+  function load(id, v){
+    var x = byId[id];
+    if (!x) return false;
+    src.value = x.source;
+    syncName();
+    syncHighlight();
+    sel.value = id;
+    history.replaceState(null, "", "#ex=" + encodeURIComponent(id));
+    (VIEWS[v] || VIEWS[view])();
+    return true;
+  }
+  sel.addEventListener("change", function(){ if (sel.value) load(sel.value); });
+  src.addEventListener("input", function(){
+    if (sel.value) sel.value = "";
+    if (/[#&]ex=/.test(location.hash)) history.replaceState(null, "", location.pathname + location.search);
+  });
+
+  var menu = fetch("/api/examples")
+    .then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    .then(function(d){ fillMenu(d.examples || []); window.MMST.erlang.refresh(); });
+
+  function unescapeHash(s){ try { return decodeURIComponent(s); } catch (e) { return s; } }
+  var hash = location.hash;
+  var p = /[#&]p=([A-Za-z0-9_-]+)/.exec(hash), seeded = p && decode(p[1]);
+  var ex = /[#&]ex=([^&]+)/.exec(hash), wanted = /[#&]view=(checks|efsm|erlang)(?:&|$)/.exec(hash);
+  $("kbdhint").textContent = document.querySelector("#erl-run .kbd").textContent = MAC ? "\u2318\u21A9" : "Ctrl+\u21A9";
+
+  window.MMST.erlang.init({
+    post: post,
+    protocol: function(){ return src.value; },
+    moduleName: moduleName,
+    hasProtocol: function(id){ return !!byId[id]; },
+    openProtocol: function(id){ shown = true; setMode("protocol"); if (!load(id, "checks")) check(); }
+  });
+  var erl = /[#&]mode=erlang(?:&|$)/.test(hash), erlId = /[#&]erl=([^&]+)/.exec(hash);
+
+  src.value = seeded || loadDraft() || SEED;
+  syncName();
+  syncHighlight();
+  // Start: #mode=erlang, else #p=, else #ex= (once the menu is in), else the draft or the starter.
+  if (erl) {
+    menu["catch"](function(){});
+    setMode("erlang", erlId ? unescapeHash(erlId[1]) : undefined);
+  } else if (ex && !seeded) {
+    menu.then(function(){
+      if (load(unescapeHash(ex[1]), wanted && wanted[1])) return;
+      history.replaceState(null, "", location.pathname + location.search);   // no such example
+      check();
+    }, check);
+  } else {
+    menu["catch"](function(){});
+    check();
+  }
+})();
+</script>
+</body>
+</html>

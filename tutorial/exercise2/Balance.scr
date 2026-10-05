@@ -1,0 +1,14 @@
+module Balance;
+
+// BROKEN. No mixed choice: an ordinary directed choice.
+// r is in one branch only. Which flag fails?
+
+global protocol Balance(role p, role q, role r) {
+    choice at p {
+        a() from p to q;
+        c() from q to r;
+    } or {
+        b() from p to q;
+        c() from q to p;
+    }
+}

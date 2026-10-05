@@ -1,0 +1,20 @@
+module StreamCancel;
+
+// YOUR TURN, part two. Valid as it stands.
+//
+// A streaming RPC that sends one chunk and stops. Make Server send chunks
+// until Client cancels, with rec Name { ... continue Name; }. Keep all four
+// flags green. Where the continue goes matters: one obvious place gives
+// "Cannot translate: mixed {".
+
+global protocol StreamCancel(role Client, role Server, role Metrics) {
+    request() from Client to Server;
+    mixed {
+        chunk() from Server to Client;
+        more() from Client to Server;
+        counted() from Server to Metrics;
+    } or Server -> Client {
+        cancel() from Client to Server;
+        cancelled() from Server to Metrics;
+    }
+}

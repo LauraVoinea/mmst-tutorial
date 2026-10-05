@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Examples · mMST</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23086788'/%3E%3Cpath d='M6 9h20M6 23h20' stroke='%23fff1d0' stroke-opacity='.45' stroke-width='1.5'/%3E%3Cpath d='M9 9l14 14' stroke='%2306aed5' stroke-width='3'/%3E%3Cpath d='M9 23l14-14' stroke='%23f0c808' stroke-width='3'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="theme.css">
+<script src="shared.js"></script>
+<script src="examples.js"></script>
+<style>
+/* Protocols from /api/examples; descriptions from examples.js. */
+body{height:auto; min-height:100vh}
+.doc .col{max-width:48rem}
+.doc nav.jump{display:flex; flex-wrap:wrap; gap:.3rem 1.3rem; margin:-.5rem 0 .6rem; font-family:var(--mono); font-size:.74rem}
+.doc p.intro{margin:-.1rem 0 1rem}
+.doc .note{background:var(--card); border:1px solid var(--rule); border-left:3px solid var(--rhs); border-radius:4px; padding:.8rem 1rem; margin:0 0 1.4rem}
+
+/* featured: cards */
+.ex{background:var(--card); border:1px solid var(--rule); border-radius:6px; padding:1rem clamp(14px,2.4vw,20px) .8rem; margin:0 0 1rem; scroll-margin-top:1rem}
+.ex-head{display:flex; flex-wrap:wrap; align-items:baseline; gap:.2rem .8rem}
+.ex-head h2{font-family:var(--serif); font-weight:400; font-size:1.4rem; line-height:1.2; margin:0; color:var(--ink)}
+.from{font-family:var(--mono); font-size:.66rem; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-3)}
+.ex-head .go{margin-left:auto; display:flex; gap:.4rem}
+.ex-head .go .btn{padding:.22rem .6rem; font-size:.72rem}
+.ex ul.facts{list-style:none; margin:.55rem 0 .8rem; padding:0; display:flex; flex-wrap:wrap; gap:.35rem}
+.ex ul.facts li{font-family:var(--mono); font-size:.7rem; color:var(--ink-2); background:var(--sunk); border:1px solid var(--rule); border-radius:999px; padding:.06rem .55rem}
+.doc .ex p{margin:0 0 .65rem}
+.ex .lbl{font-family:var(--mono); font-size:.63rem; letter-spacing:.13em; text-transform:uppercase; color:var(--accent); margin-right:.55rem}
+.ex .try{border-top:1px dashed var(--rule-2); padding-top:.65rem; margin-top:.15rem}
+.ex details{margin:0 0 .45rem}
+.ex details summary{font-family:var(--mono); font-size:.72rem; color:var(--ink-3); cursor:pointer; list-style:none; width:max-content; max-width:100%}
+.ex details summary::-webkit-details-marker{display:none}
+.ex details summary::before{content:"\25B8\00a0"; color:var(--rhs)}
+.ex details[open] summary::before{content:"\25BE\00a0"}
+.ex details summary:hover{color:var(--ink)}
+.doc .ex details p{margin:.45rem 0 .2rem}
+.doc .ex details.src pre.code{margin:.5rem 0 .35rem; max-height:26rem; overflow:auto}
+
+/* the rest: rows */
+.doc ul.rows{list-style:none; margin:0 0 1.2rem; padding:0}
+.doc ul.rows li{display:grid; grid-template-columns:12.5rem minmax(0,1fr) auto; gap:.15rem 1rem; align-items:baseline; padding:.6rem 0; border-bottom:1px solid var(--rule); scroll-margin-top:1rem}
+.doc ul.rows .nm{display:flex; flex-direction:column; gap:.1rem; min-width:0}
+.doc ul.rows .nm a{font-family:var(--mono); font-size:.84rem; overflow-wrap:anywhere}
+.doc ul.rows .tx{color:var(--ink-2)}
+.doc ul.rows a.efsm{font-family:var(--mono); font-size:.72rem; color:var(--ink-3)}
+.doc ul.rows a.efsm:hover{color:var(--lhs)}
+@media (max-width:640px){
+  .doc ul.rows li{grid-template-columns:minmax(0,1fr) auto}
+  .doc ul.rows a.efsm{grid-column:2; grid-row:1}
+  .doc ul.rows .tx{grid-column:1 / -1; grid-row:2}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <a class="home" href="./" title="Playground">
+      <svg width="42" height="20" viewBox="0 0 42 20" aria-hidden="true">
+      <line x1="0" y1="4" x2="42" y2="4" stroke="var(--rule-2)"></line>
+      <line x1="0" y1="16" x2="42" y2="16" stroke="var(--rule-2)"></line>
+      <line x1="8" y1="4" x2="30" y2="16" stroke="var(--lhs)" stroke-width="1.6"></line>
+      <line x1="12" y1="16" x2="34" y2="4" stroke="var(--rhs)" stroke-width="1.6"></line>
+    </svg>
+      <h1>mMST</h1>
+    </a>
+    <span class="sub"><a href="mixed-choice.html">mixed choice</a><a href="examples.html" aria-current="page">examples</a></span>
+  </div>
+  <button class="btn icon" id="theme" title="Light / dark" aria-label="Toggle light and dark">&#9680;</button>
+</header>
+
+<main class="doc">
+  <div class="col">
+
+    <p class="kicker">the menu</p>
+    <h1 class="title">Examples</h1>
+    <p class="lede">What each protocol models, where the race is, and what to look at.</p>
+    <nav class="jump" id="jump" aria-label="Sections"></nav>
+
+    <div id="groups"><p>Loading&hellip;</p></div>
+
+  </div>
+</main>
+
+<footer class="site" id="site-footer"></footer>
+
+<script>
+(function(){
+  "use strict";
+  var E = window.MMST.examples, about = E.about;
+
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+  function href(id, view){ return "./#ex=" + encodeURIComponent(id) + (view ? "&view=" + view : ""); }
+  function slug(s){ return s.toLowerCase().replace(/[^a-z0-9]+/g, "-"); }
+
+  var HEADINGS = {};
+
+  // Roles, mixed choices, recursion; comments stripped (some hold old versions).
+  function facts(src){
+    var code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, ""), out = [];
+    var roles = /global\s+protocol\s+\w+\s*\(([^)]*)\)/.exec(code);
+    if (roles) out.push(roles[1].split(",").map(function(r){ return r.trim().replace(/^role\s+/, ""); }).join(", "));
+    var mc = (code.match(/\bmixed\s*\{/g) || []).length;
+    if (mc) out.push(mc + (mc === 1 ? " mixed choice" : " mixed choices"));
+    if (/\brec\s+\w+/.test(code)) out.push("recursion");
+    return out;
+  }
+
+  function card(x){
+    var a = about[x.id] || {}, h = '<article class="ex" id="' + esc(x.id) + '">';
+    h += '<div class="ex-head"><h2>' + esc(E.title(x.id)) + '</h2>' +
+         (a.from ? '<span class="from">' + esc(a.from) + '</span>' : '') +
+         '<span class="go"><a class="btn" href="' + href(x.id) + '" title="Check it">open</a>' +
+         '<a class="btn" href="' + href(x.id, "efsm") + '" title="EFSM tab">efsm</a></span></div>';
+    if (x.source) h += '<ul class="facts">' + facts(x.source).map(function(f){ return '<li>' + esc(f) + '</li>'; }).join("") + '</ul>';
+    if (a.what) h += '<p>' + a.what + '</p>';
+    if (a.race) h += '<p><span class="lbl">race</span>' + a.race + '</p>';
+    if (a.look) h += '<p><span class="lbl">look</span>' + a.look + '</p>';
+    if (a.tryIt) h += '<div class="try"><p><span class="lbl">try</span>' + a.tryIt[0] + '</p>' +
+                      '<details><summary>result</summary><p>' + a.tryIt[1] + '</p></details></div>';
+    if (x.source) h += '<details class="src"><summary>' + esc(x.path) + '</summary><pre class="code">' +
+                       window.MMST.highlight(x.source, "scribble") + '</pre></details>';
+    return h + '</article>';
+  }
+
+  function row(x){
+    var a = about[x.id] || {};
+    return '<li id="' + esc(x.id) + '"><span class="nm"><a href="' + href(x.id) + '" title="Check it">' +
+           esc(E.title(x.id)) + '</a>' + (a.from ? '<span class="from">' + esc(a.from) + '</span>' : '') + '</span>' +
+           '<span class="tx">' + (a.text || '') + '</span>' +
+           '<a class="efsm" href="' + href(x.id, "efsm") + '" title="EFSM tab">efsm</a></li>';
+  }
+
+  function render(list, offline){
+    var h = offline ? '<p class="note">Server offline: descriptions only.</p>' : '', nav = [];
+    E.arrange(list, true).forEach(function(g){
+      if (!g.items.length) return;
+      var id = slug(g.group), name = HEADINGS[g.group] || g.group.toLowerCase();
+      nav.push('<a href="#' + id + '">' + esc(name) + '</a>');
+      h += '<section id="' + id + '"><h3 class="sec">' + esc(name) + '</h3>' +
+           (E.groups[g.group] ? '<p class="intro">' + E.groups[g.group] + '</p>' : '') +
+           (g.group === "Examples" ? g.items.map(card).join("")
+                                   : '<ul class="rows">' + g.items.map(row).join("") + '</ul>') + '</section>';
+    });
+    $("groups").innerHTML = h;
+    $("jump").innerHTML = nav.join("");
+    // The anchor lookup ran before the content: scroll again.
+    var t = location.hash.length > 1 && document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    if (t) t.scrollIntoView();
+  }
+
+  // Offline: descriptions only.
+  function fromAbout(){
+    return Object.keys(about).map(function(id){
+      var m = /^(\d+)-/.exec(id);
+      return { id: id, group: m ? "Exercise " + m[1] : "Examples", path: "", source: "" };
+    });
+  }
+
+  fetch("/api/examples")
+    .then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    .then(function(d){ render(d.examples || [], false); },
+          function(){ render(fromAbout(), true); });
+})();
+</script>
+</body>
+</html>

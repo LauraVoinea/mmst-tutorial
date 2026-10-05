@@ -1,0 +1,17 @@
+module Timeout;
+
+// Figure 1 of the paper.
+// B observes: it goes along with A (left) or times out (right).
+
+global protocol Timeout(role A, role B, role C) {
+    mixed {                       // left: the happy path
+        a1() from A to B;
+        a2() from A to C;
+        a3() from B to C;
+        a4() from B to A;
+        a5() from C to A;
+    } or A -> B {                 // right: B overrules A
+        TOa() from B to A;
+        TOc() from B to C;
+    }
+}

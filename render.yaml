@@ -1,0 +1,14 @@
+# Render Blueprint: New → Blueprint, pick this repo.
+# Free: 0.1 CPU, sleeps after 15 min idle. For the workshop, switch to Standard.
+services:
+  - type: web
+    name: mmst-playground
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      - key: MMST_ERLANG
+        value: all

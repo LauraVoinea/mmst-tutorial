@@ -1,0 +1,21 @@
+module CancellableRPC;
+
+// YOUR TURN.
+//
+// Client requests; Server returns a result (left) or Client cancels (right).
+// Auditor must learn which. Client observes, hence "or Server -> Client".
+//
+// CT fails. Add the messages that tell whoever is left out; get all four
+// flags green. Hint: on the left, the observer must reach every other role,
+// directly or transitively.
+
+global protocol CancellableRPC(role Client, role Server, role Auditor) {
+    request() from Client to Server;
+    mixed {
+        result() from Server to Client;
+        // TODO
+    } or Server -> Client {
+        cancel() from Client to Server;
+        // TODO
+    }
+}

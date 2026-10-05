@@ -1,0 +1,6 @@
+.git
+toolchain
+classes
+.classpath
+**/.DS_Store
+**/*_debug.log

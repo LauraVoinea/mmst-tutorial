@@ -1,0 +1,17 @@
+module WellFormed;
+
+// BROKEN. q may send a to p; p, the observer, may overrule with c.
+// Look at label b. The checker names the culprit: under the flags in the
+// playground, on the "WFqqqq:" line on the command line.
+
+global protocol WellFormed(role p, role q, role r) {
+    mixed {
+        a() from q to p;
+        b() from q to r;
+        y() from p to r;
+        z() from p to q;
+    } or q -> p {
+        c() from p to q;
+        b() from q to r;
+    }
+}

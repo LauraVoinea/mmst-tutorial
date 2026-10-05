@@ -1,0 +1,16 @@
+module SingleDecision;
+
+// BROKEN. One right-hand line removed.
+// Two flags fail. Why two?
+
+global protocol SingleDecision(role A, role B, role C) {
+    mixed {
+        a1() from A to B;
+        a2() from A to C;
+        a3() from B to C;
+        a4() from B to A;
+        a5() from C to A;
+    } or A -> B {
+        TOa() from B to A;
+    }
+}

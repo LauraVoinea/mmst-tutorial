@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mixed choice · mMST</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23086788'/%3E%3Cpath d='M6 9h20M6 23h20' stroke='%23fff1d0' stroke-opacity='.45' stroke-width='1.5'/%3E%3Cpath d='M9 9l14 14' stroke='%2306aed5' stroke-width='3'/%3E%3Cpath d='M9 23l14-14' stroke='%23f0c808' stroke-width='3'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="theme.css">
+<script src="shared.js"></script>
+<style>
+body{height:auto; min-height:100vh}
+.doc dl{margin:.3rem 0 1.2rem}
+.doc dt{font-family:var(--mono); font-size:.86rem; color:var(--ink); margin:1rem 0 0}
+.doc dt span{font-family:var(--sans); font-size:.96rem; color:var(--ink-2); margin-left:.55rem}
+.doc dd{margin:.25rem 0 0; color:var(--ink-2)}
+.doc .cite{font-size:.86rem; color:var(--ink-3); line-height:1.7}
+.doc a.back{font-family:var(--mono); font-size:.8rem; color:var(--lhs)}
+.doc ul.reading{list-style:none; margin:0 0 1.4rem; padding:0; max-width:44rem}
+.doc ul.reading li{padding:.6rem 0; border-bottom:1px solid var(--rule); color:var(--ink-2)}
+.doc ul.reading li a{color:var(--lhs)}
+.doc ul.reading li b{color:var(--ink)}
+
+/* race diagram */
+.race{margin:.8rem 0 1.6rem}
+.race-tabs{display:flex; gap:.4rem; margin-bottom:.7rem}
+.race-tabs button{
+  font-family:var(--mono); font-size:.72rem; padding:.35rem .6rem; border-radius:3px;
+  border:1px solid var(--rule-2); background:var(--paper); cursor:pointer; color:var(--ink-2);
+}
+.race-tabs button.on{background:var(--lhs); border-color:var(--lhs); color:var(--paper)}
+.race-diagram{
+  display:block; width:100%; max-width:36rem; height:auto;
+  background:var(--sunk); border:1px solid var(--rule); border-radius:6px;
+}
+.race-diagram .lane{stroke:var(--rule-2); stroke-width:1}
+.race-diagram .lane-label{font:700 11px var(--mono); fill:var(--ink-2)}
+.race-diagram .role-tag{font:400 9px var(--mono); fill:var(--ink-3)}
+.race-diagram .msg-label{font:400 10px var(--mono); fill:var(--ink-2)}
+.race-diagram .gc-label{font:italic 9px var(--sans); fill:var(--ink-3)}
+.race-diagram .msg{
+  fill:none; stroke-width:2; stroke-dasharray:1; stroke-dashoffset:1; animation:draw .5s linear forwards;
+}
+.race-diagram .msg.lhs{stroke:var(--lhs)}
+.race-diagram .msg.rhs{stroke:var(--rhs)}
+.race-diagram .msg.stale{
+  stroke:var(--ink-3); stroke-dasharray:.08 .05; opacity:0;
+  animation:staleFade .6s ease forwards; animation-delay:.3s;
+}
+.race-diagram .arrow-fill.lhs{fill:var(--lhs)}
+.race-diagram .arrow-fill.rhs{fill:var(--rhs)}
+.race-diagram .arrow-fill.stale{fill:var(--ink-3)}
+.race-diagram .commit{fill:var(--paper); stroke:var(--rule-2); stroke-width:1.5; transition:fill .3s ease, stroke .3s ease}
+.race-diagram .commit.on{fill:var(--pass); stroke:var(--pass)}
+.race-run{display:none}
+.race-run.show{display:block}
+@keyframes draw{ to{ stroke-dashoffset:0 } }
+@keyframes staleFade{ to{ opacity:.6 } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <a class="home" href="./" title="Playground">
+      <svg width="42" height="20" viewBox="0 0 42 20" aria-hidden="true">
+      <line x1="0" y1="4" x2="42" y2="4" stroke="var(--rule-2)"></line>
+      <line x1="0" y1="16" x2="42" y2="16" stroke="var(--rule-2)"></line>
+      <line x1="8" y1="4" x2="30" y2="16" stroke="var(--lhs)" stroke-width="1.6"></line>
+      <line x1="12" y1="16" x2="34" y2="4" stroke="var(--rhs)" stroke-width="1.6"></line>
+    </svg>
+      <h1>mMST</h1>
+    </a>
+    <span class="sub"><a href="mixed-choice.html" aria-current="page">mixed choice</a><a href="examples.html">examples</a></span>
+  </div>
+  <button class="btn icon" id="theme" title="Light / dark" aria-label="Toggle light and dark">&#9680;</button>
+</header>
+
+<main class="doc">
+  <div class="col">
+
+    <p class="kicker">background</p>
+    <h1 class="title">Mixed choice</h1>
+    <p class="lede">Mixed choice in asynchronous multiparty session types: participants' views may
+       diverge for a while, and can always reach a consistent state.</p>
+
+    <h3 class="sec">projection</h3>
+    <p>One global protocol, projected onto one local type per role. <code>&#8853;</code> send,
+       <code>&amp;</code> receive, <code>&#9655;</code> between the two sides of a mixed choice,
+       both live at once.</p>
+
+    <h3 class="sec">beyond directed choice</h3>
+    <p>Classical multiparty session types (<a href="https://doi.org/10.1145/1328438.1328472">Honda,
+       Yoshida, Carbone, POPL 2008</a>) need <b>directed</b> choice: one named role decides, and a
+       role only sends or only receives. Exceptions (<a href="https://doi.org/10.1007/978-3-540-85361-9_32">Carbone,
+       Honda, Yoshida, CONCUR 2008</a>), interruptible blocks (<a href="https://doi.org/10.1007/s10703-014-0218-8">Demangeon,
+       Honda, Hu, Neykova, Yoshida, FMSD 2015</a>), timeouts (<a href="https://doi.org/10.1007/978-3-031-35361-1_12">Pears,
+       Bocchi, King, COORDINATION 2023</a>; <a href="https://doi.org/10.4230/LIPIcs.ECOOP.2024.19">Hou,
+       Lagaillardie, Yoshida, ECOOP 2024</a>) and crash handling (<a href="https://doi.org/10.1007/978-3-319-89884-1_28">Viering,
+       Chen, Eugster, Hu, Ziarek, ESOP 2018</a>; <a href="https://doi.org/10.1145/3485501">Viering,
+       Hu, Eugster, Ziarek, OOPSLA 2021</a>) each added a bespoke construct. Each is a role facing
+       input and output at once. Mixed choice (MC) covers them; the paper's Table 1 re-expresses them.</p>
+
+    <h3 class="sec">the construct</h3>
+    <pre class="code">mixed {                  // left: the default
+    a1() from A to B;
+    a3() from B to C;
+} or A -&gt; B {            // right: B may overrule A
+    TOa() from B to A;
+    TOc() from B to C;
+}</pre>
+    <p>Both sides are live until someone commits, so two roles may speculate on different sides: a
+       race that classical MST rules out, permitted here and still statically checked.</p>
+
+    <h3 class="sec">two runs</h3>
+    <p><code>Timeout</code>, the paper's Figure 1: <b>B</b> follows <b>A</b> (left) or overrules it (right).</p>
+    <div class="race">
+      <div class="race-tabs">
+        <button class="race-tab on" data-run="lhs">B follows A (LHS)</button>
+        <button class="race-tab" data-run="rhs">B overrules A (RHS)</button>
+      </div>
+      <svg class="race-diagram" id="raceSvg" viewBox="0 0 560 230" role="img"
+           aria-label="Two executions of the Timeout protocol between roles A, B and C">
+        <defs>
+          <marker id="arrow-lhs" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path class="arrow-fill lhs" d="M0,0 L8,4 L0,8 z"></path>
+          </marker>
+          <marker id="arrow-rhs" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path class="arrow-fill rhs" d="M0,0 L8,4 L0,8 z"></path>
+          </marker>
+          <marker id="arrow-stale" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path class="arrow-fill stale" d="M0,0 L8,4 L0,8 z"></path>
+          </marker>
+        </defs>
+        <line class="lane" x1="40" y1="40"  x2="530" y2="40"></line>
+        <line class="lane" x1="40" y1="120" x2="530" y2="120"></line>
+        <line class="lane" x1="40" y1="200" x2="530" y2="200"></line>
+        <text class="lane-label" x="8" y="44">A</text>
+        <text class="lane-label" x="8" y="124">B</text>
+        <text class="role-tag" x="20" y="112">observer</text>
+        <text class="lane-label" x="8" y="204">C</text>
+        <circle class="commit" id="commit-a" cx="25" cy="40"  r="5"></circle>
+        <circle class="commit" id="commit-b" cx="25" cy="120" r="5"></circle>
+        <circle class="commit" id="commit-c" cx="25" cy="200" r="5"></circle>
+
+        <g class="race-run lhs show">
+          <line class="msg lhs" pathLength="1" x1="60" y1="40" x2="150" y2="120" marker-end="url(#arrow-lhs)"></line>
+          <text class="msg-label" x="66" y="72">a1</text>
+          <line class="msg lhs" pathLength="1" x1="150" y1="40" x2="240" y2="200" marker-end="url(#arrow-lhs)"></line>
+          <text class="msg-label" x="180" y="150">a2</text>
+          <line class="msg lhs" pathLength="1" x1="240" y1="120" x2="330" y2="200" marker-end="url(#arrow-lhs)"></line>
+          <text class="msg-label" x="258" y="172">a3</text>
+          <line class="msg lhs" pathLength="1" x1="330" y1="120" x2="420" y2="40" marker-end="url(#arrow-lhs)"></line>
+          <text class="msg-label" x="358" y="72">a4</text>
+          <line class="msg lhs" pathLength="1" x1="420" y1="200" x2="500" y2="40" marker-end="url(#arrow-lhs)"></line>
+          <text class="msg-label" x="448" y="102">a5</text>
+        </g>
+
+        <g class="race-run rhs">
+          <line class="msg rhs" pathLength="1" x1="60" y1="120" x2="150" y2="40" marker-end="url(#arrow-rhs)"></line>
+          <text class="msg-label" x="66" y="72">TOa</text>
+          <line class="msg rhs" pathLength="1" x1="150" y1="120" x2="240" y2="200" marker-end="url(#arrow-rhs)"></line>
+          <text class="msg-label" x="176" y="150">TOc</text>
+          <line class="msg stale" pathLength="1" x1="80" y1="40" x2="170" y2="120" marker-end="url(#arrow-stale)"></line>
+          <text class="gc-label" x="150" y="112">a1, gc'd</text>
+          <line class="msg stale" pathLength="1" x1="180" y1="40" x2="270" y2="200" marker-end="url(#arrow-stale)"></line>
+          <text class="gc-label" x="260" y="192">a2, gc'd</text>
+        </g>
+      </svg>
+    </div>
+    <p class="hintline">Left: <b>B</b> commits by receiving <code>a1</code>; the others follow.
+       Right: <b>B</b> commits by sending <code>TOa</code>; <code>a1</code>, already in flight,
+       crosses it and is dropped by each runtime, using local information only.</p>
+
+    <h3 class="sec">the observer</h3>
+    <p>The sender on the right is the MC's <b>observer</b>: the one role that may overrule. The
+       left is the speculative default; the others learn the outcome from what arrives. A fully
+       symmetric construct would not be statically checkable; this asymmetric one is, and still
+       expresses timeouts, cancellation, interrupts, heartbeats and graceful shutdown.</p>
+
+    <h3 class="sec">commitment and stale messages</h3>
+    <p>The observer commits with its first action in the MC: receiving on the left, sending on the
+       right. Another role commits on an action causally dependent on the observer's. Roles may
+       disagree for a while; the checks guarantee they can always reach a consistent state.</p>
+    <p>In-flight messages from the losing side are <b>stale</b>. Each runtime purges them using
+       local information only, so application code never sees them: garbage collection, for
+       messages.</p>
+
+    <h3 class="sec">the four checks</h3>
+    <p><b>WF</b>: Definition 3.4. <b>SD</b> and <b>CT</b>: together, <b>awareness</b>
+       (Definition 3.9). <b>BA</b>: Definition 3.12.</p>
+    <div class="checks"></div>
+    <p>One error can fail two checks: fix the first <b>FAIL</b>. A protocol can pass all four and
+       still fail projection (<code>Couldn't project to R</code>): the classical merge failure,
+       unrelated to MC.</p>
+
+    <h3 class="sec">guarantees</h3>
+    <p>Asynchronous, with FIFO order between any two roles. For an aware, balanced protocol:
+       <b>progress</b> (Theorem 3.13), <b>operational correspondence</b> between the global type
+       and its projections, modulo stale messages (Theorem 4.4), and <b>orphan-message freedom</b>
+       (Theorem 4.7). No deadlock, no reception errors, no message stuck forever.</p>
+    <p>The generated Erlang keeps them: per role, a <code>gen_&lt;role&gt;.erl</code>
+       <code>gen_statem</code> behaviour, correct by construction and not for editing, which handles
+       commitment, switching sides and purging; and a <code>&lt;role&gt;.erl</code> template for
+       your logic.</p>
+
+    <h3 class="sec">further reading</h3>
+    <p>Mixed choice, <b>synchronous</b>: one step commits everyone, so these races do not arise.</p>
+    <ul class="reading">
+      <li><b>Vasconcelos, Casal, Almeida, Mordido, ESOP 2020</b>: mixed sessions, binary.
+        <a href="https://doi.org/10.1007/978-3-030-44914-8_26">doi.org/10.1007/978-3-030-44914-8_26</a></li>
+      <li><b>Castagna, Dezani-Ciancaglini, Padovani, LMCS 2012</b>: global types, set-theoretic trace semantics.
+        <a href="https://doi.org/10.2168/LMCS-8(1:24)2012">doi.org/10.2168/LMCS-8(1:24)2012</a></li>
+      <li><b>Jongmans, Yoshida, ESOP 2020</b>: global/local bisimulation, symmetric choice.
+        <a href="https://doi.org/10.1007/978-3-030-44914-8_10">doi.org/10.1007/978-3-030-44914-8_10</a></li>
+    </ul>
+    <p><b>Asynchronous</b>, by other means:</p>
+    <ul class="reading">
+      <li><b>Barbanera, Dezani-Ciancaglini, PLACES 2026</b>: mixed choice, typing processes against
+        global types by coinduction, without projection. No stale messages: every message must be received.
+        <a href="https://doi.org/10.4204/EPTCS.444.2">doi.org/10.4204/EPTCS.444.2</a></li>
+      <li><b>Ciccone, Dagnino, Padovani, JLAMP 2024</b>: fair termination, without mixed choice;
+        related to, not the same as, per-MC clear termination.
+        <a href="https://doi.org/10.1016/j.jlamp.2024.100964">doi.org/10.1016/j.jlamp.2024.100964</a></li>
+    </ul>
+
+    <h3 class="sec">the paper</h3>
+    <p class="cite">Laura Bocchi, Raymond Hu, A. Laura Voinea, Simon Thompson.
+       <i>Mixed Choice in Asynchronous Multiparty Session Types.</i> Proc. ACM Program. Lang.
+       10, OOPSLA1, article 148, 2026. doi.org/10.1145/3798256<br>
+       MC and the observer 2.1; Erlang 2.2; well-formedness 3.1; progress and awareness 3.3;
+       stale purging 4.1; projection 4.2; orphan freedom 4.4; related work 6 and Appendix A.</p>
+
+    <p><a class="back" href="./">&larr; Playground</a></p>
+
+  </div>
+</main>
+
+<footer class="site" id="site-footer"></footer>
+
+<script>
+(function(){
+  "use strict";
+  var slot = document.querySelector(".checks"), C = window.MMST.checks, h = "<dl>";
+  window.MMST.order.forEach(function(k){
+    h += "<dt>" + k + "<span>" + C[k][0] + "</span></dt><dd>" + C[k][1] + "</dd>";
+  });
+  slot.innerHTML = h + "</dl>";
+})();
+(function(){
+  "use strict";
+  var svg = document.getElementById("raceSvg");
+  if (!svg) return;
+
+  var SCHEDULE = {
+    lhs: [["commit-b", 550], ["commit-c", 1000], ["commit-a", 1450]],
+    rhs: [["commit-b", 150], ["commit-a", 550], ["commit-c", 750]]
+  };
+  var timers = [];
+
+  function play(run){
+    timers.forEach(clearTimeout); timers = [];
+    Array.prototype.forEach.call(svg.querySelectorAll(".race-run"), function(g){ g.classList.remove("show"); });
+    Array.prototype.forEach.call(svg.querySelectorAll(".commit"), function(c){ c.classList.remove("on"); });
+    void svg.getBoundingClientRect(); // reflow: replay the draw-in
+    var group = svg.querySelector(".race-run." + run);
+    if (group) group.classList.add("show");
+    (SCHEDULE[run] || []).forEach(function(pair){
+      timers.push(setTimeout(function(){
+        var dot = document.getElementById(pair[0]);
+        if (dot) dot.classList.add("on");
+      }, pair[1]));
+    });
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll(".race-tab"), function(btn){
+    btn.addEventListener("click", function(){
+      Array.prototype.forEach.call(document.querySelectorAll(".race-tab"), function(b){ b.classList.remove("on"); });
+      btn.classList.add("on");
+      play(btn.dataset.run);
+    });
+  });
+
+  play("lhs");
+})();
+</script>
+</body>
+</html>
