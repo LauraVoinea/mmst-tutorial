@@ -1,7 +1,7 @@
 # mMST playground
 
 A browser front end for the mMST checker,
-[scribble-gt-scala](https://github.com/rhu1/scribble-gt-scala): check a mixed-choice protocol,
+[scribble-gt-scala](https://github.com/rhu1/scribble-gt-scala/tree/artifact): check a mixed-choice protocol,
 step through each role's EFSM, and edit and run its Erlang. From *Mixed Choice in Asynchronous
 Multiparty Session Types*, OOPSLA 2026, <https://doi.org/10.1145/3798256>.
 

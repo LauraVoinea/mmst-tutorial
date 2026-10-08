@@ -4,32 +4,43 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>mMST — mixed-choice session types</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23086788'/%3E%3Cpath d='M6 9h20M6 23h20' stroke='%23fff1d0' stroke-opacity='.45' stroke-width='1.5'/%3E%3Cpath d='M9 9l14 14' stroke='%2306aed5' stroke-width='3'/%3E%3Cpath d='M9 23l14-14' stroke='%23f0c808' stroke-width='3'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23002b36'/%3E%3Cpath d='M6 9h20M6 23h20' stroke='%2393a1a1' stroke-opacity='.6' stroke-width='1.5'/%3E%3Cpath d='M9 9l14 14' stroke='%232aa198' stroke-width='3'/%3E%3Cpath d='M9 23l14-14' stroke='%23b58900' stroke-width='3'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="theme.css">
 <script src="shared.js"></script>
 <style>
-/* panes: one screen when wide, stacked when narrow */
+/* panes: side by side when wide, stacked when narrow; split.js moves the gutter */
 body{height:100vh}
-main{flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+main{flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,calc(var(--split,50) * 1%)) 1px minmax(0,1fr)}
 @media (max-width:900px){
   body{height:auto}
-  main{grid-template-columns:1fr; grid-template-rows:minmax(260px,50vh) auto}
+  main{grid-template-columns:1fr; grid-template-rows:var(--top,50vh) 1px auto}
 }
 .pane{display:flex; flex-direction:column; min-width:0; min-height:0}
-.pane + .pane{border-left:1px solid var(--rule)}
-@media (max-width:900px){ .pane + .pane{border-left:0; border-top:1px solid var(--rule)} }
+.gutter{position:relative; z-index:3; background:var(--rule-2); cursor:col-resize; touch-action:none}
+.gutter::before{content:""; position:absolute; inset:0 -6px}
+.gutter::after{content:""; position:absolute; inset:0 -1px; background:var(--accent); opacity:0; transition:opacity .12s}
+.gutter:hover::after, .gutter:focus-visible::after, body.resizing .gutter::after{opacity:1}
+.gutter:focus-visible{outline:0}
+@media (max-width:900px){
+  .gutter{cursor:row-resize}
+  .gutter::before{inset:-6px 0}
+  .gutter::after{inset:-1px 0}
+}
+body.resizing{-webkit-user-select:none; user-select:none}
+body.resizing.cols, body.resizing.cols *{cursor:col-resize !important}
+body.resizing.rows, body.resizing.rows *{cursor:row-resize !important}
 .pane-head{
-  height:46px; flex:none; display:flex; align-items:center; gap:.6rem; padding:0 clamp(12px,2vw,18px);
+  height:42px; flex:none; display:flex; align-items:center; gap:.6rem; padding:0 clamp(12px,2vw,18px);
   border-bottom:1px solid var(--rule); background:var(--head);
-  font-family:var(--mono); font-size:.68rem; letter-spacing:.13em; text-transform:uppercase; color:var(--head-ink);
+  font-size:.8rem; color:var(--head-ink);
 }
 .pane-head .right{margin-left:auto; display:flex; gap:.5rem; align-items:center; text-transform:none; letter-spacing:0}
-.pane-head .file{text-transform:none; letter-spacing:.02em; color:var(--ink-3)}
+.pane-head .file{color:var(--ink-3)}
 .pane-head .status{font-size:.7rem; color:var(--ink-3)}
 .pane-head .btn.primary{padding:.34rem .8rem}
 
 /* view tabs */
-.tabs{display:inline-flex; border:1px solid var(--rule-2); border-radius:5px; overflow:hidden; background:var(--paper)}
+.tabs{display:inline-flex; border:1px solid var(--rule-2); border-radius:0; overflow:hidden; background:var(--paper)}
 .tabs button{
   font-family:var(--mono); font-size:.74rem; letter-spacing:.04em; padding:.32rem .75rem;
   border:0; background:transparent; color:var(--ink-2); cursor:pointer;
@@ -46,23 +57,23 @@ main{flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) min
   font-family:var(--mono); font-size:13.5px; line-height:1.62; tab-size:4;
   white-space:pre; overflow:auto; border:0;
 }
-.pane-body.editor pre.hl{color:var(--ink); background:var(--paper); pointer-events:none}
+.pane-body.editor pre.hl{color:var(--ink-2); background:var(--paper); pointer-events:none}
 .pane-body.editor pre.hl code{white-space:inherit; font:inherit}
 .pane-body.editor textarea{resize:none; outline:none; background:transparent; color:transparent; caret-color:var(--ink)}
 
 /* modes */
 main[hidden], header select[hidden]{display:none}
-.modes{display:inline-flex; flex:none; border:1px solid var(--bar-rule); border-radius:5px; overflow:hidden}
+.modes{display:inline-flex; flex:none; border:1px solid var(--bar-rule); border-radius:0; overflow:hidden}
 .modes button{
   font-family:var(--mono); font-size:.72rem; letter-spacing:.06em; padding:.38rem .85rem;
   border:0; background:transparent; color:var(--bar-ink-2); cursor:pointer;
 }
 .modes button + button{border-left:1px solid var(--bar-rule)}
 .modes button[aria-selected="true"]{background:var(--bar-ink); color:var(--bar); font-weight:700}
-.modes button:hover:not([aria-selected="true"]){color:var(--bar-ink); background:rgba(255,241,208,.12)}
+.modes button:hover:not([aria-selected="true"]){color:var(--bar-ink); background:var(--paper)}
 
 /* erlang mode */
-@media (max-width:900px){ #erlang-main{grid-template-rows:minmax(340px,62vh) auto} }
+@media (max-width:900px){ #erlang-main{grid-template-rows:var(--top,62vh) 1px auto} }
 .pane-head .file{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .pane-head .btn{white-space:nowrap}
 @media (max-width:600px){ .pane-head .btn:not(.primary){padding:.3rem .5rem; font-size:.7rem} }
@@ -72,7 +83,7 @@ main[hidden], header select[hidden]{display:none}
   padding:.5rem clamp(12px,2vw,18px); border-bottom:1px solid var(--rule); background:var(--paper);
 }
 .erl-files button{
-  font-family:var(--mono); font-size:.72rem; padding:.22rem .5rem; border-radius:3px; cursor:pointer;
+  font-family:var(--mono); font-size:.72rem; padding:.22rem .5rem; border-radius:0; cursor:pointer;
   border:1px solid var(--rule-2); background:var(--paper); color:var(--ink-2); white-space:nowrap;
 }
 .erl-files button:hover{border-color:var(--lhs); color:var(--lhs)}
@@ -82,17 +93,17 @@ main[hidden], header select[hidden]{display:none}
 .erl-files button.edited::after{content:" \2022"; color:var(--rhs); font-weight:700}
 .erl-files button.edited[aria-current="true"]::after{color:var(--hl)}
 .erl-files button.bad{border-color:var(--fail); color:var(--fail)}
-.erl-files button.bad[aria-current="true"]{background:var(--fail); border-color:var(--fail); color:var(--fail-on)}
+.erl-files button.bad[aria-current="true"]{background:var(--fail-fill); border-color:var(--fail-fill); color:var(--fail-on)}
 .erl-files .gap{width:.45rem; flex:none}
 .erl-files button.undo{border:0; background:none; color:var(--ink-3); padding:.22rem 0; margin-left:auto; text-decoration:underline; text-underline-offset:2px}
 @media (max-width:900px){ .erl-files{flex-wrap:nowrap; overflow-x:auto} }
-.pane-body.editor mark.eline{background:rgba(221,28,26,.16); color:inherit; border-radius:2px; box-shadow:0 0 0 2px rgba(221,28,26,.16)}
+.pane-body.editor mark.eline{background:rgba(220,50,47,.2); color:inherit; box-shadow:0 0 0 2px rgba(220,50,47,.2)}
 
-.verdict .tag.wait{background:var(--hl); color:var(--hl-on)}
+.verdict .tag.wait{color:var(--rhs)}
 .rc0{color:var(--lhs)} .rc1{color:var(--rhs)} .rc2{color:var(--ink-2)} .rc3{color:var(--ink-3)}
 .hintline .rc{font-family:var(--mono); font-size:.88em; font-weight:700}
 .msg a[data-protocol]{color:var(--lhs); text-decoration:underline; text-underline-offset:2px}
-.msg code{font-family:var(--mono); font-size:.88em; background:var(--sunk); padding:.08em .3em; border-radius:3px}
+.msg code{font-family:var(--mono); font-size:.88em; background:var(--sunk); padding:.08em .3em; border-radius:0}
 .msg .msg-do{display:flex; flex-wrap:wrap; gap:.4rem .8rem; align-items:center; margin-top:.7rem; font-size:.84rem; color:var(--ink-3)}
 
 ul.erl-roles{list-style:none; margin:0 0 1.1rem; padding:0; max-width:46rem}
@@ -100,7 +111,7 @@ ul.erl-roles li{display:flex; flex-wrap:wrap; align-items:baseline; gap:.15rem .
 ul.erl-roles b{font-family:var(--mono); font-size:.82rem; min-width:7rem}
 ul.erl-roles .alias{font-weight:400; font-size:.72rem; color:var(--ink-3)}
 ul.erl-roles .st{font-family:var(--mono); font-size:.78rem; letter-spacing:.05em; font-weight:700}
-ul.erl-roles .st code{font-family:var(--mono); background:var(--sunk); padding:.05em .3em; border-radius:3px}
+ul.erl-roles .st code{font-family:var(--mono); background:var(--sunk); padding:.05em .3em; border-radius:0}
 ul.erl-roles li.finished .st{color:var(--pass)}
 ul.erl-roles li.waiting .st{color:var(--rhs)}
 ul.erl-roles li.crashed .st, ul.erl-roles li.failed .st{color:var(--fail)}
@@ -126,7 +137,7 @@ details.raw ul.erl-problems{margin-top:.6rem}
 .erl-logbar .n{color:var(--ink-3)}
 .erl-log{
   font-family:var(--mono); font-size:.74rem; line-height:1.6; color:var(--ink);
-  background:var(--sunk); border:1px solid var(--rule); border-radius:4px; padding:.55rem 0;
+  background:var(--sunk); border:1px solid var(--rule); border-radius:0; padding:.55rem 0;
   overflow:auto; max-height:30rem;
 }
 .erl-log .ln, .erl-log summary{display:flex; gap:.8rem; padding:0 .9rem; white-space:pre; width:max-content; min-width:100%}
@@ -141,17 +152,19 @@ details.raw ul.erl-problems{margin-top:.6rem}
 .erl-log details.rep pre{margin:.15rem .9rem .5rem calc(var(--who,8ch) + 1.7rem); font:inherit; white-space:pre; color:var(--ink-2)}
 .files-bar{display:flex; flex-wrap:wrap; gap:.5rem 1rem; align-items:center; justify-content:space-between;
   padding:.8rem clamp(12px,2vw,18px) 0; color:var(--ink-2); font-size:.86rem}
-.files-bar code{font-family:var(--mono); font-size:.9em; background:var(--sunk); padding:.08em .3em; border-radius:3px}
+.files-bar code{font-family:var(--mono); font-size:.9em; background:var(--sunk); padding:.08em .3em; border-radius:0}
 
 /* result */
 .result{padding:1rem clamp(12px,2vw,18px) 2.5rem}
 .verdict{
   display:flex; align-items:baseline; gap:.7rem; margin:0 0 1rem; flex-wrap:wrap;
-  font-family:var(--mono); font-size:.78rem; letter-spacing:.1em; text-transform:uppercase;
+  font-size:.82rem; text-transform:uppercase;
 }
-.verdict .tag{padding:.16rem .5rem; border-radius:3px; font-weight:600}
-.verdict .tag.ok{background:var(--pass-fill); color:var(--pass-on)}
-.verdict .tag.no{background:var(--fail-fill); color:var(--fail-on)}
+.verdict .tag{font-weight:700}
+.verdict .tag::before{content:"[\00a0"; color:var(--ink-3); font-weight:400}
+.verdict .tag::after{content:"\00a0]"; color:var(--ink-3); font-weight:400}
+.verdict .tag.ok{color:var(--pass)}
+.verdict .tag.no{color:var(--fail)}
 .verdict .name{color:var(--ink-3); letter-spacing:.02em; text-transform:none; font-size:.8rem}
 
 ul.flags{list-style:none; margin:0 0 1.4rem; padding:0; max-width:34rem}
@@ -169,11 +182,11 @@ ul.flags li.first-fail b{color:var(--fail)}
 .culprit{
   font-family:var(--mono); font-size:.8rem; color:var(--fail);
   background:var(--sunk); border-left:2px solid var(--fail);
-  padding:.5rem .8rem; margin:-.9rem 0 1.4rem; max-width:34rem; border-radius:0 3px 3px 0;
+  padding:.5rem .8rem; margin:-.9rem 0 1.4rem; max-width:34rem; border-radius:0;
 }
 .hintline{max-width:46rem; color:var(--ink-2); margin:0 0 1rem}
 .hintline b{color:var(--ink)}
-.hintline code{font-family:var(--mono); font-size:.9em; background:var(--sunk); padding:.1em .35em; border-radius:3px}
+.hintline code{font-family:var(--mono); font-size:.9em; background:var(--sunk); padding:.1em .35em; border-radius:0}
 
 ul.locals{list-style:none; margin:0; padding:0}
 ul.locals li{padding:.5rem 0; border-bottom:1px solid var(--rule)}
@@ -188,7 +201,7 @@ ul.locals .ty{
 
 .msg{
   max-width:46rem; background:var(--card); border:1px solid var(--rule);
-  border-left:3px solid var(--rhs); border-radius:4px; padding:.9rem 1.1rem; margin:0 0 1.2rem;
+  border-left:3px solid var(--rhs); border-radius:0; padding:.9rem 1.1rem; margin:0 0 1.2rem;
   color:var(--ink-2);
 }
 .msg .t{
@@ -207,14 +220,14 @@ details.raw summary::before{content:"\25B8 "; color:var(--rhs)}
 details.raw[open] summary::before{content:"\25BE "}
 pre.raw{
   font-family:var(--mono); font-size:.72rem; line-height:1.55; background:var(--sunk);
-  border:1px solid var(--rule); border-radius:4px; padding:.8rem 1rem; margin:.6rem 0 0;
+  border:1px solid var(--rule); border-radius:0; padding:.8rem 1rem; margin:.6rem 0 0;
   overflow-x:auto; max-height:22rem; color:var(--ink-2);
 }
 
 /* erlang view */
 .files{display:flex; gap:.3rem; flex-wrap:wrap; padding:.8rem clamp(12px,2vw,18px) 0}
 .files button{
-  font-family:var(--mono); font-size:.72rem; padding:.25rem .5rem; border-radius:3px;
+  font-family:var(--mono); font-size:.72rem; padding:.25rem .5rem; border-radius:0;
   border:1px solid var(--rule-2); background:var(--paper); cursor:pointer; color:var(--ink-2);
 }
 .files button.on{background:var(--lhs); border-color:var(--lhs); color:var(--paper)}
@@ -224,14 +237,14 @@ pre.raw{
 .efsm-top{display:flex; flex-wrap:wrap; gap:.6rem 1rem; align-items:center; justify-content:space-between; margin:0 0 .5rem}
 .efsm-roles{display:flex; gap:.3rem; flex-wrap:wrap}
 .efsm-roles button{
-  font-family:var(--mono); font-size:.74rem; padding:.28rem .7rem; border-radius:999px;
+  font-family:var(--mono); font-size:.74rem; padding:.28rem .7rem; border-radius:0;
   border:1px solid var(--rule-2); background:var(--paper); color:var(--ink-2); cursor:pointer;
 }
 .efsm-roles button[aria-selected="true"]{background:var(--lhs); border-color:var(--lhs); color:var(--paper)}
 .efsm-ctl{display:flex; gap:.35rem}
 .efsm-ctl .btn{padding:.3rem .6rem; font-size:.74rem}
 .efsm-note{color:var(--ink-2); font-size:.88rem; margin:.1rem 0 .7rem; max-width:46rem}
-.efsm-canvas{overflow-x:auto; border:1px solid var(--rule); border-radius:6px; background:var(--card)}
+.efsm-canvas{overflow-x:auto; border:1px solid var(--rule); border-radius:0; background:var(--card)}
 .efsm-svg{display:block; height:auto; margin:0 auto}
 .efsm-svg .tr{fill:none; stroke-width:1.8; stroke-linecap:round}
 .efsm-svg .tr.lhs{stroke:var(--lhs)}
@@ -275,7 +288,7 @@ pre.raw{
 .efsm-trace .lead{font-family:var(--mono); font-size:.66rem; letter-spacing:.14em; text-transform:uppercase; color:var(--accent)}
 .efsm-trace ol{list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:.3rem}
 .efsm-trace li{
-  font-family:var(--mono); font-size:.74rem; padding:.16rem .45rem; border-radius:3px;
+  font-family:var(--mono); font-size:.74rem; padding:.16rem .45rem; border-radius:0;
   background:var(--sunk); color:var(--ink); border-left:3px solid var(--ink-3);
 }
 .efsm-trace li.lhs{border-left-color:var(--lhs)}
@@ -316,7 +329,7 @@ pre.raw{
 </header>
 
 <main id="protocol-main">
-  <section class="pane">
+  <section class="pane" id="protocol-left">
     <div class="pane-head">
       <span>protocol</span><span class="file" id="modname"></span>
       <span class="right">
@@ -329,6 +342,8 @@ pre.raw{
       <textarea id="src" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off"></textarea>
     </div>
   </section>
+
+  <div class="gutter" role="separator" tabindex="0" aria-controls="protocol-left" aria-label="Resize panes" title="Drag to resize; double-click to reset"></div>
 
   <section class="pane">
     <div class="pane-head">
@@ -346,7 +361,7 @@ pre.raw{
 </main>
 
 <main id="erlang-main" hidden>
-  <section class="pane">
+  <section class="pane" id="erlang-left">
     <div class="pane-head">
       <span>erlang</span><span class="file" id="erl-where"></span>
       <span class="right">
@@ -360,6 +375,8 @@ pre.raw{
       <textarea id="erl-src" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="Erlang source"></textarea>
     </div>
   </section>
+
+  <div class="gutter" role="separator" tabindex="0" aria-controls="erlang-left" aria-label="Resize panes" title="Drag to resize; double-click to reset"></div>
 
   <section class="pane">
     <div class="pane-head">
@@ -378,6 +395,7 @@ pre.raw{
 
 <footer class="site" id="site-footer"></footer>
 
+<script src="split.js"></script>
 <script src="efsm.js"></script>
 <script src="examples.js"></script>
 <script src="erlang.js"></script>
@@ -389,7 +407,6 @@ pre.raw{
     "module Scratch;",
     "",
     "// B observes: it goes along with A (left) or times out (right).",
-    "// Both sides are live at once.",
     "",
     "global protocol Scratch(role A, role B, role C) {",
     "    mixed {",
@@ -530,6 +547,12 @@ pre.raw{
     status.textContent = on ? (label || "checking…") : "";
   }
 
+  // Loaded, not checked: nothing runs until asked.
+  function idle(){
+    $("resultTitle").textContent = "not checked";
+    show(msg("wait", "Not checked", "Press Check, or " + (MAC ? "\u2318\u21A9" : "Ctrl+\u21A9") + "."));
+  }
+
   function check(){
     shown = true;
     select("checks");
@@ -627,7 +650,7 @@ pre.raw{
     if (was === "erlang") window.MMST.erlang.leave();
     history.replaceState(null, "", $("examples").value ? "#ex=" + encodeURIComponent($("examples").value)
                                                        : location.pathname + location.search);
-    if (!shown) check();
+    if (!shown) idle();
   }
   modeButtons.forEach(function(b){ b.addEventListener("click", function(){ setMode(b.getAttribute("data-mode")); }); });
 
@@ -658,7 +681,7 @@ pre.raw{
     syncHighlight();
     sel.value = id;
     history.replaceState(null, "", "#ex=" + encodeURIComponent(id));
-    (VIEWS[v] || VIEWS[view])();
+    if (VIEWS[v]) VIEWS[v](); else idle();
     return true;
   }
   sel.addEventListener("change", function(){ if (sel.value) load(sel.value); });
@@ -682,7 +705,7 @@ pre.raw{
     protocol: function(){ return src.value; },
     moduleName: moduleName,
     hasProtocol: function(id){ return !!byId[id]; },
-    openProtocol: function(id){ shown = true; setMode("protocol"); if (!load(id, "checks")) check(); }
+    openProtocol: function(id){ shown = true; setMode("protocol"); if (!load(id)) idle(); }
   });
   var erl = /[#&]mode=erlang(?:&|$)/.test(hash), erlId = /[#&]erl=([^&]+)/.exec(hash);
 
@@ -697,11 +720,11 @@ pre.raw{
     menu.then(function(){
       if (load(unescapeHash(ex[1]), wanted && wanted[1])) return;
       history.replaceState(null, "", location.pathname + location.search);   // no such example
-      check();
-    }, check);
+      idle();
+    }, idle);
   } else {
     menu["catch"](function(){});
-    check();
+    idle();
   }
 })();
 </script>

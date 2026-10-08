@@ -1,6 +1,6 @@
 module StreamCancel;
 
-// YOUR TURN, part two. Valid as it stands.
+// Add in recursion. Valid as it stands.
 //
 // A streaming RPC that sends one chunk and stops. Make Server send chunks
 // until Client cancels, with rec Name { ... continue Name; }. Keep all four

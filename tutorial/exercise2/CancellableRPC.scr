@@ -1,7 +1,6 @@
 module CancellableRPC;
 
-// YOUR TURN.
-//
+// Fill in the example.
 // Client requests; Server returns a result (left) or Client cancels (right).
 // Auditor must learn which. Client observes, hence "or Server -> Client".
 //

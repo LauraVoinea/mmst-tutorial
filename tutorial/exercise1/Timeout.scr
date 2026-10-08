@@ -4,7 +4,7 @@ module Timeout;
 // B observes: it goes along with A (left) or times out (right).
 
 global protocol Timeout(role A, role B, role C) {
-    mixed {                       // left: the happy path
+    mixed {                       // left
         a1() from A to B;
         a2() from A to C;
         a3() from B to C;

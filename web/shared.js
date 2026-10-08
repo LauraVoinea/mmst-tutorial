@@ -54,7 +54,7 @@
       '<span><i>Mixed Choice in Asynchronous Multiparty Session Types</i></span>' +
       '<nav><a href="https://doi.org/10.1145/3798256">Paper</a>' +
       '<a href="https://arxiv.org/abs/2602.23927">arXiv</a>' +
-      '<a href="https://github.com/rhu1/scribble-gt-scala">Code</a></nav>';
+      '<a href="https://github.com/rhu1/scribble-gt-scala/tree/artifact">Code</a></nav>';
   };
 
   document.addEventListener("DOMContentLoaded", function(){

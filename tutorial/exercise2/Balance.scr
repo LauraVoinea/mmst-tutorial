@@ -1,7 +1,7 @@
 module Balance;
 
 // BROKEN. No mixed choice: an ordinary directed choice.
-// r is in one branch only. Which flag fails?
+// r is in one branch only. Why does balance fail?
 
 global protocol Balance(role p, role q, role r) {
     choice at p {

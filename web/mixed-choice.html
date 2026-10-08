@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mixed choice · mMST</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23086788'/%3E%3Cpath d='M6 9h20M6 23h20' stroke='%23fff1d0' stroke-opacity='.45' stroke-width='1.5'/%3E%3Cpath d='M9 9l14 14' stroke='%2306aed5' stroke-width='3'/%3E%3Cpath d='M9 23l14-14' stroke='%23f0c808' stroke-width='3'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23002b36'/%3E%3Cpath d='M6 9h20M6 23h20' stroke='%2393a1a1' stroke-opacity='.6' stroke-width='1.5'/%3E%3Cpath d='M9 9l14 14' stroke='%232aa198' stroke-width='3'/%3E%3Cpath d='M9 23l14-14' stroke='%23b58900' stroke-width='3'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="theme.css">
 <script src="shared.js"></script>
 <style>
@@ -14,23 +14,23 @@ body{height:auto; min-height:100vh}
 .doc dt span{font-family:var(--sans); font-size:.96rem; color:var(--ink-2); margin-left:.55rem}
 .doc dd{margin:.25rem 0 0; color:var(--ink-2)}
 .doc .cite{font-size:.86rem; color:var(--ink-3); line-height:1.7}
-.doc a.back{font-family:var(--mono); font-size:.8rem; color:var(--lhs)}
+.doc a.back{font-family:var(--mono); font-size:.8rem; color:var(--accent)}
 .doc ul.reading{list-style:none; margin:0 0 1.4rem; padding:0; max-width:44rem}
 .doc ul.reading li{padding:.6rem 0; border-bottom:1px solid var(--rule); color:var(--ink-2)}
-.doc ul.reading li a{color:var(--lhs)}
+.doc ul.reading li a{color:var(--accent)}
 .doc ul.reading li b{color:var(--ink)}
 
 /* race diagram */
 .race{margin:.8rem 0 1.6rem}
 .race-tabs{display:flex; gap:.4rem; margin-bottom:.7rem}
 .race-tabs button{
-  font-family:var(--mono); font-size:.72rem; padding:.35rem .6rem; border-radius:3px;
+  font-family:var(--mono); font-size:.72rem; padding:.35rem .6rem; border-radius:0;
   border:1px solid var(--rule-2); background:var(--paper); cursor:pointer; color:var(--ink-2);
 }
 .race-tabs button.on{background:var(--lhs); border-color:var(--lhs); color:var(--paper)}
 .race-diagram{
   display:block; width:100%; max-width:36rem; height:auto;
-  background:var(--sunk); border:1px solid var(--rule); border-radius:6px;
+  background:var(--sunk); border:1px solid var(--rule); border-radius:0;
 }
 .race-diagram .lane{stroke:var(--rule-2); stroke-width:1}
 .race-diagram .lane-label{font:700 11px var(--mono); fill:var(--ink-2)}
@@ -84,7 +84,7 @@ body{height:auto; min-height:100vh}
        diverge for a while, and can always reach a consistent state.</p>
 
     <h3 class="sec">projection</h3>
-    <p>One global protocol, projected onto one local type per role. <code>&#8853;</code> send,
+    <p>One global protocol, projected onto one local type per role (<a href="https://arxiv.org/html/2602.23927v2#S4.SS2">§4.2</a>). <code>&#8853;</code> send,
        <code>&amp;</code> receive, <code>&#9655;</code> between the two sides of a mixed choice,
        both live at once.</p>
 
@@ -97,8 +97,8 @@ body{height:auto; min-height:100vh}
        Bocchi, King, COORDINATION 2023</a>; <a href="https://doi.org/10.4230/LIPIcs.ECOOP.2024.19">Hou,
        Lagaillardie, Yoshida, ECOOP 2024</a>) and crash handling (<a href="https://doi.org/10.1007/978-3-319-89884-1_28">Viering,
        Chen, Eugster, Hu, Ziarek, ESOP 2018</a>; <a href="https://doi.org/10.1145/3485501">Viering,
-       Hu, Eugster, Ziarek, OOPSLA 2021</a>) each added a bespoke construct. Each is a role facing
-       input and output at once. Mixed choice (MC) covers them; the paper's Table 1 re-expresses them.</p>
+       Hu, Eugster, Ziarek, OOPSLA 2021</a>) each added a bespoke construct (<a href="https://arxiv.org/html/2602.23927v2#A1.SS0.SSS0.Px3">Appendix A</a>). Each is a role facing
+       input and output at once. Mixed choice (MC) covers them; the paper's <a href="https://arxiv.org/html/2602.23927v2#S5.T1">Table 1</a> re-expresses them.</p>
 
     <h3 class="sec">the construct</h3>
     <pre class="code">mixed {                  // left: the default
@@ -109,10 +109,10 @@ body{height:auto; min-height:100vh}
     TOc() from B to C;
 }</pre>
     <p>Both sides are live until someone commits, so two roles may speculate on different sides: a
-       race that classical MST rules out, permitted here and still statically checked.</p>
+       race that classical MST rules out, permitted here and still statically checked (<a href="https://arxiv.org/html/2602.23927v2#S2.SS1">§2.1</a>).</p>
 
     <h3 class="sec">two runs</h3>
-    <p><code>Timeout</code>, the paper's Figure 1: <b>B</b> follows <b>A</b> (left) or overrules it (right).</p>
+    <p><code>Timeout</code>, the paper's <a href="https://arxiv.org/html/2602.23927v2#S2.F1">Figure 1</a>: <b>B</b> follows <b>A</b> (left) or overrules it (right).</p>
     <div class="race">
       <div class="race-tabs">
         <button class="race-tab on" data-run="lhs">B follows A (LHS)</button>
@@ -172,7 +172,7 @@ body{height:auto; min-height:100vh}
        crosses it and is dropped by each runtime, using local information only.</p>
 
     <h3 class="sec">the observer</h3>
-    <p>The sender on the right is the MC's <b>observer</b>: the one role that may overrule. The
+    <p>The sender on the right is the MC's <b>observer</b>: the one role that may overrule (<a href="https://arxiv.org/html/2602.23927v2#S2.SS1">§2.1</a>). The
        left is the speculative default; the others learn the outcome from what arrives. A fully
        symmetric construct would not be statically checkable; this asymmetric one is, and still
        expresses timeouts, cancellation, interrupts, heartbeats and graceful shutdown.</p>
@@ -183,52 +183,51 @@ body{height:auto; min-height:100vh}
        disagree for a while; the checks guarantee they can always reach a consistent state.</p>
     <p>In-flight messages from the losing side are <b>stale</b>. Each runtime purges them using
        local information only, so application code never sees them: garbage collection, for
-       messages.</p>
+       messages (<a href="https://arxiv.org/html/2602.23927v2#S4.SS1">§4.1</a>).</p>
 
     <h3 class="sec">the four checks</h3>
-    <p><b>WF</b>: Definition 3.4. <b>SD</b> and <b>CT</b>: together, <b>awareness</b>
-       (Definition 3.9). <b>BA</b>: Definition 3.12.</p>
     <div class="checks"></div>
     <p>One error can fail two checks: fix the first <b>FAIL</b>. A protocol can pass all four and
-       still fail projection (<code>Couldn't project to R</code>): the classical merge failure,
+       still fail projection (<a href="https://arxiv.org/html/2602.23927v2#S4.SS2">§4.2</a>, <code>Couldn't project to R</code>): the classical merge failure,
        unrelated to MC.</p>
 
     <h3 class="sec">guarantees</h3>
     <p>Asynchronous, with FIFO order between any two roles. For an aware, balanced protocol:
-       <b>progress</b> (Theorem 3.13), <b>operational correspondence</b> between the global type
-       and its projections, modulo stale messages (Theorem 4.4), and <b>orphan-message freedom</b>
-       (Theorem 4.7). No deadlock, no reception errors, no message stuck forever.</p>
+       <b>progress</b> (<a href="https://arxiv.org/html/2602.23927v2#S3.Thmtheorem13">Theorem 3.13</a>, <a href="https://arxiv.org/html/2602.23927v2#S3.SS3">§3.3</a>), <b>operational correspondence</b> between the global type
+       and its projections, modulo stale messages (<a href="https://arxiv.org/html/2602.23927v2#S4.Thmtheorem4">Theorem 4.4</a>), and <b>orphan-message freedom</b>
+       (<a href="https://arxiv.org/html/2602.23927v2#S4.Thmtheorem7">Theorem 4.7</a>, <a href="https://arxiv.org/html/2602.23927v2#S4.SS4">§4.4</a>).</p>
     <p>The generated Erlang keeps them: per role, a <code>gen_&lt;role&gt;.erl</code>
        <code>gen_statem</code> behaviour, correct by construction and not for editing, which handles
        commitment, switching sides and purging; and a <code>&lt;role&gt;.erl</code> template for
-       your logic.</p>
+       your logic (<a href="https://arxiv.org/html/2602.23927v2#S2.SS2">§2.2</a>).</p>
 
     <h3 class="sec">further reading</h3>
     <p>Mixed choice, <b>synchronous</b>: one step commits everyone, so these races do not arise.</p>
     <ul class="reading">
-      <li><b>Vasconcelos, Casal, Almeida, Mordido, ESOP 2020</b>: mixed sessions, binary.
+      <li><b>Vasconcelos, Casal, Almeida, Mordido, ESOP 2020</b>: mixed sessions, binary (<a href="https://arxiv.org/html/2602.23927v2#A1.SS0.SSS0.Px1.p1">Appendix A</a>).
         <a href="https://doi.org/10.1007/978-3-030-44914-8_26">doi.org/10.1007/978-3-030-44914-8_26</a></li>
-      <li><b>Castagna, Dezani-Ciancaglini, Padovani, LMCS 2012</b>: global types, set-theoretic trace semantics.
+      <li><b>Castagna, Dezani-Ciancaglini, Padovani, LMCS 2012</b>: global types, set-theoretic trace semantics (<a href="https://arxiv.org/html/2602.23927v2#A1.SS0.SSS0.Px2.p2">Appendix A</a>).
         <a href="https://doi.org/10.2168/LMCS-8(1:24)2012">doi.org/10.2168/LMCS-8(1:24)2012</a></li>
-      <li><b>Jongmans, Yoshida, ESOP 2020</b>: global/local bisimulation, symmetric choice.
+      <li><b>Jongmans, Yoshida, ESOP 2020</b>: global/local bisimulation, symmetric choice (<a href="https://arxiv.org/html/2602.23927v2#A1.SS0.SSS0.Px2.p3">Appendix A</a>).
         <a href="https://doi.org/10.1007/978-3-030-44914-8_10">doi.org/10.1007/978-3-030-44914-8_10</a></li>
     </ul>
     <p><b>Asynchronous</b>, by other means:</p>
     <ul class="reading">
       <li><b>Barbanera, Dezani-Ciancaglini, PLACES 2026</b>: mixed choice, typing processes against
-        global types by coinduction, without projection. No stale messages: every message must be received.
+        global types by coinduction, without projection. No stale messages: every message must be received (<a href="https://arxiv.org/html/2602.23927v2#S6.p1">§6</a>).
         <a href="https://doi.org/10.4204/EPTCS.444.2">doi.org/10.4204/EPTCS.444.2</a></li>
       <li><b>Ciccone, Dagnino, Padovani, JLAMP 2024</b>: fair termination, without mixed choice;
-        related to, not the same as, per-MC clear termination.
+        related to, not the same as, per-MC clear termination (<a href="https://arxiv.org/html/2602.23927v2#S6.p8">§6</a>).
         <a href="https://doi.org/10.1016/j.jlamp.2024.100964">doi.org/10.1016/j.jlamp.2024.100964</a></li>
     </ul>
 
     <h3 class="sec">the paper</h3>
     <p class="cite">Laura Bocchi, Raymond Hu, A. Laura Voinea, Simon Thompson.
-       <i>Mixed Choice in Asynchronous Multiparty Session Types.</i> Proc. ACM Program. Lang.
-       10, OOPSLA1, article 148, 2026. doi.org/10.1145/3798256<br>
-       MC and the observer 2.1; Erlang 2.2; well-formedness 3.1; progress and awareness 3.3;
-       stale purging 4.1; projection 4.2; orphan freedom 4.4; related work 6 and Appendix A.</p>
+       <a href="https://doi.org/10.1145/3798256"><i>Mixed Choice in Asynchronous Multiparty Session Types</i></a>.
+       Proc. ACM Program. Lang. 10, OOPSLA1, article 148, 2026.
+       <a href="https://doi.org/10.1145/3798256">doi.org/10.1145/3798256</a><br>
+       Extended version, with appendices: <a href="https://arxiv.org/abs/2602.23927v2">arXiv:2602.23927</a>.
+       Section links on this page go there.</p>
 
     <p><a class="back" href="./">&larr; Playground</a></p>
 
@@ -240,9 +239,18 @@ body{height:auto; min-height:100vh}
 <script>
 (function(){
   "use strict";
+  var A = "https://arxiv.org/html/2602.23927v2#";
+  function a(id, text){ return '<a href="' + A + id + '">' + text + "</a>"; }
+  var AWARE = "<b>awareness</b>: " + a("S3.Thmtheorem9", "Definition 3.9") + ", " + a("S3.SS3", "§3.3");
+  var REFS = {
+    WF: a("S3.Thmtheorem4", "Definition 3.4") + ", " + a("S3.SS1", "§3.1"),
+    SD: "with CT, " + AWARE,
+    CT: "with SD, " + AWARE,
+    BA: a("S3.Thmtheorem12", "Definition 3.12") + ", " + a("S3.SS3", "§3.3")
+  };
   var slot = document.querySelector(".checks"), C = window.MMST.checks, h = "<dl>";
   window.MMST.order.forEach(function(k){
-    h += "<dt>" + k + "<span>" + C[k][0] + "</span></dt><dd>" + C[k][1] + "</dd>";
+    h += "<dt>" + k + "<span>" + C[k][0] + "</span></dt><dd>" + C[k][1].replace(/\.$/, "") + " (" + REFS[k] + ").</dd>";
   });
   slot.innerHTML = h + "</dl>";
 })();

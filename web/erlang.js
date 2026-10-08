@@ -314,11 +314,12 @@
   function offNote(){
     var t = { off: "Runs off", "no-erlang": "No Erlang", launcher: "No launcher", local: "Localhost only",
               unconfined: "Unconfined", vm: "VM does not start" }[list.code] || "Runs off";
+    var here = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
     var body = {
-      off: 'Runs are off. <code>MMST_ERLANG=1 ./serve.sh</code> runs them for localhost. Editing still works.',
+      off: here ? 'Runs are off: start the server with <code>MMST_ERLANG=1 ./serve.sh</code>. Editing still works.'
+                : 'Runs are off on this server. Editing still works.',
       "no-erlang": 'No <code>erl</code> or <code>erlc</code> on the server\'s PATH. Editing still works.',
-      local: 'Runs are for pages at localhost on the server\'s machine. <code>MMST_ERLANG=all</code> opens them ' +
-             'to everyone: containers only. Editing still works.'
+      local: 'Runs are only for the server\'s own machine. Editing still works.'
     }[list.code] || esc(list.why || "");
     return '<div class="msg wait"><div class="t">' + esc(t) + '</div>' + body + '</div>';
   }
@@ -563,7 +564,7 @@
     if (want === "editor") {
       var g = load(GENERATED);
       if (g) return open(g, g.files);
-      return generateFromEditor();
+      return nothingOpen();
     }
     var ids = list ? list.sets.map(function(s){ return s.id; }) : [];
     if (want && ids.indexOf(want) >= 0) return openListed(want);
@@ -573,7 +574,13 @@
     if (last === "editor" && load(GENERATED)) return choose("editor");
     if (last && ids.indexOf(last) >= 0) return openListed(last);
     if (ids.length) return openListed(ids[0]);
-    return generateFromEditor();
+    return nothingOpen();
+  }
+  // Generating checks the protocol, so it waits to be asked.
+  function nothingOpen(){
+    sel.value = "";
+    message("wait", "Nothing open", "Open a set from the menu, or choose <b>Generate from " +
+            esc(host.moduleName() || "Scratch") + ".scr</b>.", true);
   }
 
   MMST.erlang = {

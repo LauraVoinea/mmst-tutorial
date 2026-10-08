@@ -1,6 +1,6 @@
 module ClearTermination;
 
-// BROKEN. One line of Timeout.scr removed.
+// BROKEN.
 // Predict which of WF / SD / CT / BA fails, check, then fix it.
 // CLI, from scribble-gt-scala: ./mMST.sh <path>/exercise2/ClearTermination.scr
 
