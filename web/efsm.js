@@ -1,8 +1,11 @@
 /* EFSM view: MMST.efsm.render(host, machines), machines from /api/efsm.
-   Labels:  "6[Stream] ▷1:"    state 6, binds rec Stream, opens mixed choice 1
+   Labels:  "6[Stream] ▷1:"    state 6, binds rec Stream, mixed choice 1 starts here
             "7[] 1:"           in mixed choice 1 ("2[] 0:" outside)
             "9[] 1: Stream:"   continue Stream
-            "A?a1()/A!*TOa()"  event/action: A? receive, B! send, 𝜏 decide, ε none, * committing */
+            "A?a1()/A!*TOa()"  event/action: τ internal, ? message arrival, ! send, ε empty,
+                               * switch to the right side of the mixed choice.
+   Shown as in the paper's Figure 2: "B?a4()/ε" as "B?a4()", "B?TOa()/ε*" as "B?*TOa()",
+   "𝜏_a1/B!a1()" as "τ / B!a1()" (the subscript always repeats the message sent). */
 (function(){
   "use strict";
 
@@ -46,7 +49,13 @@
       if (!a || !b) return;
       var label = raw.label || "", cut = label.indexOf("/");
       var ev = cut < 0 ? label : label.slice(0, cut), act = cut < 0 ? "" : label.slice(cut + 1);
-      var e = { from: a, to: b, label: label, event: pretty(ev), action: pretty(act), commit: act.indexOf("*") >= 0 };
+      var toRight = act.indexOf("*") >= 0;
+      if (act === "ε" || act === "ε*") {                       // "B?m" is short for "B?m / ε"
+        if (toRight) ev = ev.replace("?", "?*");
+        act = "";
+      }
+      if (/^𝜏_/.test(ev)) ev = "𝜏";                              // plain τ, as in the paper
+      var e = { from: a, to: b, label: label, event: pretty(ev), action: pretty(act), toRight: toRight };
       edges.push(e); a.out.push(e); b.inn.push(e);
     });
     var start = nodes[0] || null;                               // initial state first
@@ -79,10 +88,10 @@
       });
     });
 
-    // Right: committing (*) steps and all after them. Left: other mixed-choice steps.
+    // Right: switches (*) and all steps after them. Left: other mixed-choice steps.
     topo.forEach(function(n){
       n.rhs = n.mc > 0 && n.inn.length > 0 && n.inn.every(function(e){ return e.side === "rhs"; });
-      n.out.forEach(function(e){ e.side = (e.commit || n.rhs) ? "rhs" : (n.mc > 0 ? "lhs" : "none"); });
+      n.out.forEach(function(e){ e.side = (e.toRight || n.rhs) ? "rhs" : (n.mc > 0 ? "lhs" : "none"); });
     });
     nodes.forEach(function(n){ n.end = !n.out.length && !n.jump; });
     return { nodes: nodes, edges: edges, jumps: jumps, start: start };
@@ -166,7 +175,7 @@
 
   function measure(e){
     e.lw = Math.max(44, Math.max(e.event.length, e.action.length + 2) * 6.5 + 14);
-    e.lh = e.jump ? 18 : 32;
+    e.lh = (e.jump || !e.action) ? 18 : 32;
   }
   function relax(list){                                         // nudge overlapping labels apart
     for (var it = 0; it < 40; it++) {
@@ -186,9 +195,9 @@
 
   function describe(n){
     var s = "state " + n.id;
-    if (n.entry) s += ": opens mixed choice " + n.mc;
+    if (n.entry) s += ": mixed choice " + n.mc + " starts here";
     else if (n.jump) s += ": continue " + n.cont + ", to state " + n.jump.to.id;
-    else if (n.end) s += ": end";
+    else if (n.end) s += ": terminal";
     else if (n.mc > 0) s += ": in mixed choice " + n.mc + (n.rhs ? ", right" : "");
     else s += ": outside mixed choice";
     if (n.rec.length) s += "; binds rec " + n.rec.join(", ");
@@ -223,12 +232,12 @@
 
     var all = g.edges.concat(g.jumps);
     all.forEach(function(e){
-      e.path = svg("path", { d: e.d, "class": "tr " + e.side + (e.commit ? " commit" : ""),
+      e.path = svg("path", { d: e.d, "class": "tr " + e.side + (e.toRight ? " switch" : ""),
                              "marker-end": "url(#efsm-ah-" + e.side + ")" }, gE);
       e.hit = svg("path", { d: e.d, "class": "hit" }, gE);
       var lg = svg("g", { "class": "lbl " + e.side, transform: "translate(" + f(e.lx) + "," + f(e.ly) + ")" }, gL);
       svg("rect", { x: f(-e.lw / 2), y: f(-e.lh / 2), width: f(e.lw), height: e.lh, rx: 4 }, lg);
-      if (e.jump) {
+      if (e.jump || !e.action) {
         svg("text", { y: 4, "class": "ev" }, lg).textContent = e.event;
       } else {
         svg("text", { y: -3, "class": "ev" }, lg).textContent = e.event;
@@ -320,7 +329,7 @@
       var opts = nexts();
       if (!opts.length) return null;
       if (laps >= 2) {                                          // after two laps, prefer an exit
-        var exits = opts.filter(function(e){ return e.commit || e.to.end; });
+        var exits = opts.filter(function(e){ return e.toRight || e.to.end; });
         if (exits.length) opts = exits;
       }
       return opts[Math.floor(Math.random() * opts.length)];
@@ -381,12 +390,13 @@
     var legend = tag("div", "efsm-legend", null, wrap);
     legend.innerHTML =
       '<span><i class="sw lhs"></i>left</span>' +
-      '<span><i class="sw rhs"></i>right, from the committing message</span>' +
+      '<span><i class="sw rhs"></i>right, from the switch (<code>*</code>)</span>' +
       '<span><i class="sw none"></i>outside</span>' +
       '<span><i class="sw jump"></i><code>continue</code></span>' +
-      '<span><code>A?m</code> receive &middot; <code>B!m</code> send &middot; <code>τ_m</code> decide &middot; ' +
-      '<code>ε</code> none &middot; <code>*</code> committing</span>' +
-      '<span><code>▷1</code> opens mixed choice 1 &middot; double ring: end</span>';
+      '<span class="row">event <code>/</code> action &middot; event: <code>τ</code> internal, <code>?</code> message arrival ' +
+      '&middot; action: <code>!</code> send, <code>ε</code> empty</span>' +
+      '<span class="row"><code>?</code> alone means <code>? / ε</code> &middot; <code>*</code> switch to the right</span>' +
+      '<span class="row"><code>▷1</code> mixed choice 1 starts here &middot; double ring: terminal</span>';
 
     var protos = {};
     machines.forEach(function(m){ protos[m.protocol] = true; });
@@ -397,7 +407,7 @@
       clear: function(){ ol.innerHTML = ""; tag("li", "empty", "nothing yet", ol); },
       push: function(e){
         var first = ol.querySelector(".empty"); if (first) ol.removeChild(first);
-        tag("li", e.side, e.jump ? e.event : e.event + " / " + e.action, ol);
+        tag("li", e.side, e.jump || !e.action ? e.event : e.event + " / " + e.action, ol);
       },
       done: function(){ tag("li", "end", "■ end", ol); },
       playing: function(on){ bPlay.textContent = on ? "❚❚ Pause" : "▶ Play"; }

@@ -256,7 +256,7 @@ pre.raw{
 .efsm-svg .tr.rhs{stroke:var(--rhs)}
 .efsm-svg .tr.none{stroke:var(--ink-3)}
 .efsm-svg .tr.jump{stroke:var(--ink-3); stroke-dasharray:5 4}
-.efsm-svg .tr.commit{stroke-width:2.4}
+.efsm-svg .tr.switch{stroke-width:2.4}
 .efsm-svg .tr.next{stroke-width:3.2}
 .efsm-svg .tr.hot{stroke:var(--hl); stroke-width:3.4}
 .efsm-svg .ah.lhs{fill:var(--lhs)}
@@ -303,6 +303,7 @@ pre.raw{
 .efsm-trace li.empty{font-family:var(--sans)}
 .efsm-legend{display:flex; flex-wrap:wrap; gap:.35rem 1.2rem; margin:1rem 0 0; font-size:.78rem; color:var(--ink-2)}
 .efsm-legend code{font-family:var(--mono); font-size:.92em; color:var(--ink)}
+.efsm-legend .row{flex-basis:100%}
 .efsm-legend .sw{display:inline-block; width:22px; vertical-align:middle; margin-right:.4rem; border-top:2.5px solid var(--ink-3)}
 .efsm-legend .sw.lhs{border-top-color:var(--lhs)}
 .efsm-legend .sw.rhs{border-top-color:var(--rhs)}
@@ -516,9 +517,10 @@ pre.raw{
       (r.locals || []).forEach(function(l){
         h += '<li><span class="role">' + esc(l.role) + '</span><code class="ty">' + esc(l.type) + '</code></li>';
       });
-      h += '</ul><p class="hintline" style="margin-top:1.2rem"><code>&#8853;</code> sends' +
-           ' &nbsp;&middot;&nbsp; <code>&amp;</code> receives' +
-           ' &nbsp;&middot;&nbsp; <code>&#9655;</code> between the two sides of a mixed choice</p>';
+      h += '</ul><p class="hintline" style="margin-top:1.2rem"><code>&#8853;</code> select (output-only choice)' +
+           ' &nbsp;&middot;&nbsp; <code>&amp;</code> branch (input-only choice)' +
+           ' &nbsp;&middot;&nbsp; <code>&#9655;n_R</code> separates the left and right of mixed choice <code>n</code>,' +
+           ' observer <code>R</code></p>';
       $("resultTitle").textContent = "valid";
     }
 

@@ -83,9 +83,9 @@ body{height:auto; min-height:100vh}
        diverge for a while, and can always reach a consistent state.</p>
 
     <h3 class="sec">projection</h3>
-    <p>One global protocol, projected onto one local type per role (<a href="https://arxiv.org/html/2602.23927v2#S4.SS2">§4.2</a>). <code>&#8853;</code> send,
-       <code>&amp;</code> receive, <code>&#9655;</code> between the two sides of a mixed choice,
-       both live at once.</p>
+    <p>One global protocol, projected onto one local type per role (<a href="https://arxiv.org/html/2602.23927v2#S4.SS2">§4.2</a>). <code>&#8853;</code> is a select
+       (output-only choice), <code>&amp;</code> a branch (input-only choice), and <code>&#9655;</code> separates
+       the left and right of a mixed choice, both live at once.</p>
 
     <h3 class="sec">why mixed choice</h3>
     <p>Classical multiparty session types (<a href="https://doi.org/10.1145/1328438.1328472">Honda,
