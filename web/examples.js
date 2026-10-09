@@ -12,8 +12,8 @@
 
     // Heading lines on the examples page.
     groups: {
-      "Exercise 1": "Start here.",
-      "Exercise 2": "Predict which flag fails, then check.",
+      "Exercise 1": "Two valid protocols: check each, then read its local types, one per role.",
+      "Exercise 2": "The first four fail the check they are named after: find out why, then fix them. Complete the last two.",
       "Examples":   "From <code>examples/scribble</code> in scribble-gt-scala, each with a change to try.",
       "More examples": "Also in <code>examples/scribble</code>."
     },
@@ -23,15 +23,15 @@
 
       /* exercise 1 */
       "1-Timeout": {
-        text: "The paper's Figure 1. B observes: it goes along with A or times out. Four green flags, three local types."
+        text: "The paper's Figure 1. B observes: it goes along with A or times out."
       },
       "1-WebSocketClose": {
-        text: "RFC 6455's closing handshake: either side may close first, or both at once. Mirror-image local types."
+        text: "RFC 6455's closing handshake: either endpoint may close first, or both at once. The two local types are dual."
       },
 
       /* exercise 2 */
       "2-ClearTermination": { text: "One line of <code>Timeout</code> removed." },
-      "2-SingleDecision":   { text: "A different line removed. Two flags fail." },
+      "2-SingleDecision":   { text: "A different line removed. Two checks fail." },
       "2-WellFormed":       { text: "A label doing two jobs; the checker names it." },
       "2-Balance":          { text: "Not a mixed choice at all." },
       "2-CancellableRPC":   { text: "CT fails: on the left, Server never hears back. Add the messages that tell Server, and Auditor, which side was taken." },
@@ -60,7 +60,7 @@
         what: "Master M, worker W, failure detector FD. Each round: <code>HB()</code> to FD, <code>OK()</code> to M, " +
               "<code>result()</code>, <code>more()</code>.",
         mc: "FD is the observer: missing a heartbeat, it overrules W with <code>Timeout()</code> and tells M with <code>Crash()</code>. " +
-              "<code>W @failed -&gt; FD</code> is a note: the checks pass without it.",
+              "<code>@failed</code> marks the right side as W's failure.",
         look: "W's EFSM: <code>Timeout()</code> can arrive anywhere in its round.",
         tryIt: ["Delete <code>Crash() from FD to M;</code>",
                 "<b>SD</b> and <b>BA</b> fail: M waits for a <code>result()</code> that never comes."]

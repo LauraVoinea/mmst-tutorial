@@ -11,9 +11,9 @@
 
   MMST.order  = ["WF", "SD", "CT", "BA"];
   MMST.checks = {
-    WF: ["well-formed",       "Each label is committing everywhere or nowhere, so a receiver knows which side of the race it is on."],
+    WF: ["well-formed",       "Each label is committing everywhere or nowhere, so a receiver knows which side of the mixed choice it is on."],
     SD: ["single-decision",   "On the right, every role depends on the observer: an overrule reaches everyone."],
-    CT: ["clear-termination", "On the left, the observer reaches every role, directly or transitively: nobody finishes without knowing which side won."],
+    CT: ["clear-termination", "On the left, the observer reaches every role, directly or transitively: no role finishes without learning the observer's decision."],
     BA: ["balanced",          "The branches of a choice involve the same roles: nobody waits for a message only one branch sends."]
   };
 

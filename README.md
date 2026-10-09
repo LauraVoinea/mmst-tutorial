@@ -27,6 +27,7 @@ The classpath is cached in `.classpath`. Erlang runs need `erl` and `erlc` on th
 | | |
 |---|---|
 | `Playground.java` | the server, on the JDK's `com.sun.net.httpserver` |
+| `Diagnose.java` | runs the checker; when it rejects a protocol, finds the lines |
 | `web/` | `index.html` (playground), `examples.html`, `mixed-choice.html`, and their scripts |
 | `mmst_run.erl` | compiles and runs a set of modules in a fresh VM; reports each role |
 | `serve.sh`, `classpath.sh` | build and run locally |
@@ -38,12 +39,12 @@ The classpath is cached in `.classpath`. Erlang runs need `erl` and `erlc` on th
 
 | | |
 |---|---|
-| `POST /api/validate {"source"}` | flags, local types, errors |
+| `POST /api/validate {"source"}` | flags, problems with their lines, local types |
 | `POST /api/generate {"source"}` | Erlang modules |
 | `POST /api/efsm {"source"}` | EFSM per role |
 | `GET /api/examples` | menu protocols |
 | `GET /api/erlang/list`, `GET /api/erlang/files?id=` | Erlang sets |
-| `POST /api/erlang/run {"files", "seconds"}` | compile, run, report |
+| `POST /api/erlang/run {"files"}` | compile, run for up to 5 s, report |
 | `GET /api/health` | `{"ok":true}` |
 
 Each check runs in a child JVM, since the checker exits on parse errors, with a deadline and a
@@ -72,8 +73,8 @@ A run executes what it is sent, so runs are off unless switched on:
 | `1` | pages at `localhost` on the server's machine |
 | `all` | anyone who can reach the server: containers only |
 
-Only the playground's own page may run code. Each run gets a fresh VM and folder, a deadline
-(1, 3 or 10 s), 128 MB of heap per process, and 300 KB of output. The server also confines runs
+Only the playground's own page may run code. Each run gets a fresh VM and folder, a 5 s
+deadline, 128 MB of heap per process, and 300 KB of output. The server also confines runs
 as far as the machine allows, probed at start-up:
 
 - own user per run, when the server is root (`setpriv`); leftovers killed and deleted
@@ -104,25 +105,8 @@ Erlang/OTP 27, and runs with `MMST_ERLANG=all`. `container.sh` sizes it to the c
 `MMST_DEADLINE`: ms per check, 15000, or 90000 below half a CPU. `MMST_ERLANG=off` switches runs
 off. `serve.sh` reads `MMST_SLOTS` and `MMST_ERLANG_SLOTS`.
 
-**Render**: push to GitHub, then **New → Blueprint** and pick the repo; `render.yaml` does the
-rest, and every push redeploys. The region, Frankfurt, is fixed at creation: edit `render.yaml`
-first to change it. The free type (0.1 CPU, sleeps after 15 min idle) is for trying it out. For
-the workshop, switch to Standard (1 CPU, 2 GB) the day before and back after; billing is by
-the second. A check takes about 0.6 s of a core, a cached one 20 ms: two CPUs serve sixty people.
-
-**Elsewhere**: behind a proxy, keep the `Host` header (runs need `Origin` to match it) and add TLS.
-
-## Before the workshop
-
-- [ ] On Render: Standard; the log's first lines show the sizing and how runs are confined.
-- [ ] `/api/health` from a phone on mobile data.
-- [ ] Each exercise gives its expected verdict; each example is valid.
-- [ ] `calculator` runs in the Erlang mode.
-- [ ] The URL is on the slides.
 
 ## Security
-
-No authentication, no rate limiting: put a rate limit in front if it stays up. Requests are
-capped at 64 KB; checks at 15 s, 256 MB and 400 000 characters of output. Only `.scr` files
+Requests are capped at 64 KB; checks at 15 s, 256 MB and 400 000 characters of output. Only `.scr` files
 directly in the exercise folders and `examples/scribble` are listed, by short path; no request
 chooses a file. Generated files are deleted after each response.

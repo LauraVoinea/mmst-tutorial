@@ -77,7 +77,6 @@ main[hidden], header select[hidden]{display:none}
 .pane-head .file{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .pane-head .btn{white-space:nowrap}
 @media (max-width:600px){ .pane-head .btn:not(.primary){padding:.3rem .5rem; font-size:.7rem} }
-.pane-head select{font-family:var(--mono); font-size:.72rem; padding:.28rem 1.6rem .28rem .5rem; max-width:none}
 .erl-files{
   flex:none; display:flex; flex-wrap:wrap; gap:.3rem; align-items:center;
   padding:.5rem clamp(12px,2vw,18px); border-bottom:1px solid var(--rule); background:var(--paper);
@@ -97,7 +96,8 @@ main[hidden], header select[hidden]{display:none}
 .erl-files .gap{width:.45rem; flex:none}
 .erl-files button.undo{border:0; background:none; color:var(--ink-3); padding:.22rem 0; margin-left:auto; text-decoration:underline; text-underline-offset:2px}
 @media (max-width:900px){ .erl-files{flex-wrap:nowrap; overflow-x:auto} }
-.pane-body.editor mark.eline{background:rgba(220,50,47,.2); color:inherit; box-shadow:0 0 0 2px rgba(220,50,47,.2)}
+.pane-body.editor mark.eline{background:var(--mark); color:inherit; box-shadow:0 0 0 2px var(--mark)}
+.pane-body.editor mark.esoft{background:var(--mark-soft); color:inherit; box-shadow:0 0 0 2px var(--mark-soft)}
 
 .verdict .tag.wait{color:var(--rhs)}
 .rc0{color:var(--lhs)} .rc1{color:var(--rhs)} .rc2{color:var(--ink-2)} .rc3{color:var(--ink-3)}
@@ -167,9 +167,9 @@ details.raw ul.erl-problems{margin-top:.6rem}
 .verdict .tag.no{color:var(--fail)}
 .verdict .name{color:var(--ink-3); letter-spacing:.02em; text-transform:none; font-size:.8rem}
 
-ul.flags{list-style:none; margin:0 0 1.4rem; padding:0; max-width:34rem}
+ul.flags{list-style:none; margin:0 0 1.4rem; padding:0; max-width:46rem}
 ul.flags li{
-  display:flex; align-items:baseline; gap:.7rem; padding:.42rem 0;
+  display:flex; flex-wrap:wrap; align-items:baseline; gap:.7rem; padding:.42rem 0;
   border-bottom:1px solid var(--rule); font-family:var(--mono); font-size:.84rem;
 }
 ul.flags li b{min-width:2.2em; font-weight:600}
@@ -179,11 +179,16 @@ ul.flags li .v{font-weight:600; letter-spacing:.08em}
 ul.flags li .v.p{color:var(--pass)} ul.flags li .v.f{color:var(--fail)}
 ul.flags li.first-fail b{color:var(--fail)}
 
-.culprit{
-  font-family:var(--mono); font-size:.8rem; color:var(--fail);
-  background:var(--sunk); border-left:2px solid var(--fail);
-  padding:.5rem .8rem; margin:-.9rem 0 1.4rem; max-width:34rem; border-radius:0;
-}
+/* where it fails: a line per construct; line numbers jump to the editor */
+.where{font-family:var(--mono); font-size:.8rem; line-height:1.5; color:var(--ink-2)}
+.where div{padding:.12rem 0 .12rem 5em; text-indent:-5em}
+.where code{font-family:var(--mono); font-size:1em; color:var(--ink); background:none; padding:0}
+.where code.hd{margin-right:.4em}
+.where button.loc{font-size:1em}
+.where .ln{display:inline-block; min-width:5em; text-indent:0}
+ul.flags .where{flex-basis:100%; margin:0 0 0 2.9em}
+.msg .where{margin:.2rem 0 .7rem}
+.msg .where:last-child{margin-bottom:0}
 .hintline{max-width:46rem; color:var(--ink-2); margin:0 0 1rem}
 .hintline b{color:var(--ink)}
 .hintline code{font-family:var(--mono); font-size:.9em; background:var(--sunk); padding:.1em .35em; border-radius:0}
@@ -383,9 +388,6 @@ pre.raw{
       <span id="erl-title">run</span>
       <span class="right">
         <span class="status" id="erl-status" aria-live="polite"></span>
-        <select id="erl-secs" title="Run time">
-          <option value="1">1 s</option><option value="3" selected>3 s</option><option value="10">10 s</option>
-        </select>
         <button class="btn primary" id="erl-run" title="Compile and run">Run <kbd class="kbd"></kbd></button>
       </span>
     </div>
@@ -442,35 +444,69 @@ pre.raw{
            '<div class="t">' + esc(title) + '</div>' + esc(body) + '</div></div>';
   }
 
-  function renderFlags(flags){
+  // `x` as code; "line 9", "lines 9, 14" jump to the editor.
+  function rich(s){
+    return esc(s).replace(/`([^`]+)`/g, "<code>$1</code>")
+      .replace(/\b(lines?) (\d+(?:, \d+)*)/g, function(all, word, ns){
+        return ns.split(", ").map(function(n, i){
+          return '<button class="loc" data-line="' + n + '">' + (i ? "" : word + " ") + n + '</button>';
+        }).join(", ");
+      });
+  }
+
+  // One line per problem: where, the construct, what.
+  function where(ps){
+    return '<div class="where">' + ps.map(function(p){
+      return '<div><span class="ln"><button class="loc" data-line="' + p.line + '">line ' + p.line + '</button></span>' +
+             (p.head ? '<code class="hd">' + esc(p.head) + '</code> ' : '') + rich(p.text) + '</div>';
+    }).join("") + '</div>';
+  }
+
+  function renderFlags(flags, problems){
     var order = ["WF","SD","CT","BA"], firstFail = null, html = '<ul class="flags">';
     order.forEach(function(k){
-      var pass = flags[k];
+      var pass = flags[k], mine = (problems || []).filter(function(p){ return p.kind === k; });
       if (!pass && firstFail === null) firstFail = k;
       html += '<li' + (!pass && firstFail === k ? ' class="first-fail"' : '') + '>' +
               '<b>' + k + '</b><span class="nm">' + FLAG_NAMES[k][0] + '</span>' +
               '<span class="dots"></span>' +
-              '<span class="v ' + (pass ? "p" : "f") + '">' + (pass ? "PASS" : "FAIL") + '</span></li>';
+              '<span class="v ' + (pass ? "p" : "f") + '">' + (pass ? "PASS" : "FAIL") + '</span>' +
+              (mine.length ? where(mine) : '') + '</li>';
     });
     return { html: html + "</ul>", firstFail: firstFail };
   }
 
+  var TITLES = {
+    parse: "Syntax error", scribble: "Scribble error", projection: "Projection fails",
+    "inconsistent-choice": "Inconsistent choice", "mixed-roles": "Cannot translate",
+    "after-mixed": "Cannot translate", "mixed-first": "Cannot translate", "empty-block": "Cannot translate",
+    timeout: "Timed out"
+  };
+
+  // With these, the problem lines say all the error would.
+  var QUIET = { parse: 1, scribble: 1, "mixed-first": 1, "empty-block": 1, "mixed-roles": 1 };
+
+  function raw(r){
+    return r.raw ? '<details class="raw"><summary>checker output</summary><pre class="raw">' + esc(r.raw) + '</pre></details>' : '';
+  }
+
   function render(r){
+    var ps = r.problems || [];
+    mark(ps);
     if (!r.flags) {
       $("resultTitle").textContent = "not checked";
-      return show(msg("", r.code === "parse" ? "Syntax error" : "Not checked",
-                      r.error || "No result.") +
-                  (r.raw ? '' : ''));
+      var said = ps.length && QUIET[r.code];
+      return show('<div class="result"><div class="msg"><div class="t">' + esc(TITLES[r.code] || "Not checked") + '</div>' +
+                  (ps.length ? where(ps) : '') + (said ? '' : rich(r.error || "No result.")) + '</div>' + raw(r) + '</div>');
     }
 
-    var f = renderFlags(r.flags), h = '<div class="result">';
+    var f = renderFlags(r.flags, ps), h = '<div class="result">';
     h += '<div class="verdict"><span class="tag ' + (r.ok ? "ok" : "no") + '">' +
          (r.ok ? "valid" : "invalid") + '</span>' +
          (r.protocol ? '<span class="name">' + esc(r.protocol) + '</span>' : '') + '</div>';
     h += f.html;
 
     if (!r.ok) {
-      if (r.culprit) h += '<div class="culprit">culprit: ' + esc(r.culprit) + '</div>';
       var k = f.firstFail;
       h += '<p class="hintline"><b>' + k + ' &mdash; ' + FLAG_NAMES[k][0] + '.</b> ' + FLAG_NAMES[k][1] + '</p>';
       h += '<p class="hintline">Fix the first <b>FAIL</b>: one error can fail two checks.</p>';
@@ -486,8 +522,7 @@ pre.raw{
       $("resultTitle").textContent = "valid";
     }
 
-    if (r.raw) h += '<details class="raw"><summary>checker output</summary><pre class="raw">' + esc(r.raw) + '</pre></details>';
-    show(h + "</div>");
+    show(h + raw(r) + "</div>");
   }
 
   var generated = null;
@@ -556,6 +591,7 @@ pre.raw{
   function check(){
     shown = true;
     select("checks");
+    mark(null);
     busy(true);
     $("resultTitle").textContent = "checking";
     show(msg("wait", "Checking", ""));
@@ -566,6 +602,7 @@ pre.raw{
   function generate(){
     shown = true;
     select("erlang");
+    mark(null);
     busy(true, "generating…");
     $("resultTitle").textContent = "generating";
     show(msg("wait", "Generating", ""));
@@ -577,6 +614,7 @@ pre.raw{
   function showEFSMs(){
     shown = true;
     select("efsm");
+    mark(null);
     busy(true, "computing…");
     $("resultTitle").textContent = "computing";
     show(msg("wait", "Computing", ""));
@@ -595,8 +633,52 @@ pre.raw{
     $("modname").style.color = m ? "" : "var(--fail)";
   }
 
-  var hl = document.getElementById("hl");
-  function syncHighlight(){ hl.innerHTML = window.MMST.highlight(src.value, "scribble") + "\n"; }
+  // Marks from the last check: hard, the lines at fault; soft, the construct. Kept
+  // while the line count stands, so they still point at the same lines.
+  var hl = document.getElementById("hl"), marks = null;
+  function lineCount(s){ return s.split("\n").length; }
+  function mark(ps){
+    marks = null;
+    (ps || []).forEach(function(p){
+      marks = marks || { at: {}, n: lineCount(src.value) };
+      (p.soft || []).forEach(function(n){ if (!marks.at[n]) marks.at[n] = "esoft"; });
+      (p.hard || []).forEach(function(n){ marks.at[n] = "eline"; });
+    });
+    syncHighlight();
+  }
+  function syncHighlight(){
+    var html = window.MMST.highlight(src.value, "scribble");
+    if (marks) {
+      var lines = html.split("\n");
+      Object.keys(marks.at).forEach(function(n){
+        var i = +n - 1, m = i >= 0 && i < lines.length && /^(\s*)(\S.*)$/.exec(lines[i]);
+        if (m) lines[i] = m[1] + '<mark class="' + marks.at[n] + '">' + m[2] + '</mark>';
+      });
+      html = lines.join("\n");
+    }
+    hl.innerHTML = html + "\n";
+  }
+  function keepMarks(){ if (marks && lineCount(src.value) !== marks.n) mark(null); }
+
+  // Select a line, a third of the way down.
+  function jump(line){
+    var text = src.value, start = 0;
+    for (var i = 1; i < line; i++) { start = text.indexOf("\n", start) + 1; if (!start) return; }
+    var end = text.indexOf("\n", start);
+    if (end < 0) end = text.length;
+    while (start < end && /[ \t]/.test(text.charAt(start))) start++;
+    src.focus({ preventScroll: true });
+    try { src.setSelectionRange(start, end); } catch (e) {}
+    var lh = parseFloat(getComputedStyle(src).lineHeight) || 20;
+    src.scrollTop = Math.max(0, (line - 1) * lh - src.clientHeight / 3);
+    src.scrollLeft = 0;
+    hl.parentElement.scrollTop = src.scrollTop; hl.parentElement.scrollLeft = 0;
+    if (window.matchMedia("(max-width:900px)").matches) src.scrollIntoView({ block: "nearest" });
+  }
+  out.addEventListener("click", function(e){
+    var b = e.target.closest("button.loc[data-line]");
+    if (b) jump(+b.dataset.line);
+  });
 
   function decode(s){
     try { return decodeURIComponent(escape(atob(s.replace(/-/g,"+").replace(/_/g,"/")))); }
@@ -607,6 +689,7 @@ pre.raw{
   var VIEWS = { checks: check, efsm: showEFSMs, erlang: generate };
   tabs.forEach(function(b){ b.addEventListener("click", function(){ VIEWS[b.getAttribute("data-view")](); }); });
   src.addEventListener("input", syncName);
+  src.addEventListener("input", keepMarks);
   src.addEventListener("input", syncHighlight);
   src.addEventListener("scroll", function(){
     var pre = hl.parentElement;
@@ -625,6 +708,7 @@ pre.raw{
       e.preventDefault();
       src.setRangeText("    ", src.selectionStart, src.selectionEnd, "end");
       syncName();
+      keepMarks();
       syncHighlight();
     }
   });
@@ -678,7 +762,7 @@ pre.raw{
     if (!x) return false;
     src.value = x.source;
     syncName();
-    syncHighlight();
+    mark(null);
     sel.value = id;
     history.replaceState(null, "", "#ex=" + encodeURIComponent(id));
     if (VIEWS[v]) VIEWS[v](); else idle();

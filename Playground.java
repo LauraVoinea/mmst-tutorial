@@ -26,7 +26,7 @@ import java.util.stream.Stream;
  *
  *   java -cp <checker classpath>:classes Playground [port] [webroot]
  *
- *   POST /api/validate        {"source"}   flags, local types, errors
+ *   POST /api/validate        {"source"}   flags, problems with lines, local types
  *   POST /api/generate        {"source"}   Erlang modules
  *   POST /api/efsm            {"source"}   EFSM per role
  *   GET  /api/examples                     menu protocols
@@ -35,6 +35,7 @@ import java.util.stream.Stream;
  *   POST /api/erlang/run      {"files"}    compile and run; off unless -Dmmst.erlang=on|all
  *
  * Each check runs in a child JVM: the checker calls System.exit on parse errors.
+ * Diagnose, when compiled, wraps the checker's Main and says where it fails.
  * -gt-check-fidelity and -gt-check-completeness are not exposed: unbounded.
  */
 public final class Playground {
@@ -50,8 +51,10 @@ public final class Playground {
         };
 
     private static String cached(String key) { synchronized (CACHE) { return CACHE.get(key); } }
+    // Not timeouts: the server may only have been busy.
     private static String cache(String key, String value) {
-        if (value != null && !value.contains("\"stage\":\"error\"") || value != null && value.contains("\"code\":"))
+        if (value != null && (!value.contains("\"stage\":\"error\"") || value.contains("\"code\":"))
+            && !value.contains("\"code\":\"timeout\""))
             synchronized (CACHE) { CACHE.put(key, value); }
         return value;
     }
@@ -64,7 +67,6 @@ public final class Playground {
     private static final Pattern MODULE   = Pattern.compile("(?m)^\\s*module\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*;");
     private static final Pattern PROTOCOL = Pattern.compile("(?m)^\\s*global\\s+protocol\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*[(<]");
     private static final Pattern FLAG     = Pattern.compile("(?m)^(WF|SD|CT|BA)=(true|false)$");
-    private static final Pattern CULPRIT  = Pattern.compile("(?m)^WFqqqq:\\s*(.+)$");
     private static final Pattern LOCAL    = Pattern.compile("(?m)^([A-Za-z0-9_.]+)@([A-Za-z0-9_]+):\\s(.+)$");
     private static final Pattern MISMATCH = Pattern.compile("Simple module name at path .*? mismatch: (\\S+)");
 
@@ -274,22 +276,33 @@ public final class Playground {
         } finally { rmrf(dir); }
     }
 
-    // exit 0: accepted.
-    private record Run(String out, int exit, boolean timedOut) {
+    // exit 0: accepted. problems: Diagnose's JSON array, or null.
+    private record Run(String out, int exit, boolean timedOut, String problems) {
         boolean failed()   { return exit != 0 || timedOut; }
     }
 
+    // Diagnose if it compiled, else the checker's Main.
+    private static final String CHECKER = present("Diagnose") ? "Diagnose" : "com.github.rhu1.gt.main.Main";
+
+    private static boolean present(String name) {
+        try { Class.forName(name, false, Playground.class.getClassLoader()); return true; }
+        catch (Throwable e) { return false; }
+    }
+
+    // argv[0] is the protocol file; Diagnose writes problems.json beside it.
     private static Run runTool(String[] argv) throws Exception {
         if (!SLOTS.tryAcquire(20, TimeUnit.SECONDS))
-            return new Run("", 1, true);
+            return new Run("", 1, true, null);
+        Path problems = Paths.get(argv[0]).resolveSibling("problems.json");
         try {
             List<String> cmd = new ArrayList<>(List.of(
                 Paths.get(System.getProperty("java.home"), "bin", "java").toString(),
                 "-Xmx" + System.getProperty("mmst.checker.heap", "256m"), "-Xss8m",
                 "-XX:TieredStopAtLevel=1", "-XX:+UseSerialGC",
                 "-Dfile.encoding=UTF-8", "-Dstdout.encoding=UTF-8", "-Dstderr.encoding=UTF-8",
+                "-Dmmst.problems=" + problems,
                 "-cp", System.getProperty("java.class.path"),
-                "com.github.rhu1.gt.main.Main"));
+                CHECKER));
             cmd.addAll(List.of(argv));
 
             Process proc = new ProcessBuilder(cmd).redirectErrorStream(true).start();
@@ -311,11 +324,20 @@ public final class Playground {
                 proc.destroyForcibly();
                 proc.waitFor(2, TimeUnit.SECONDS);
                 reader.join(500);
-                return new Run(text(buf), 1, true);
+                return new Run(text(buf), 1, true, null);
             }
             reader.join(1000);
-            return new Run(text(buf), proc.exitValue(), false);
+            return new Run(text(buf), proc.exitValue(), false, problems(problems));
         } finally { SLOTS.release(); }
+    }
+
+    // Diagnose's array, if it parses.
+    private static String problems(Path file) {
+        try {
+            if (!Files.isRegularFile(file) || Files.size(file) > 256 * 1024) return null;
+            String json = Files.readString(file, StandardCharsets.UTF_8).trim();
+            return Json.parse(json) instanceof List<?> ? json : null;
+        } catch (IOException | IllegalArgumentException e) { return null; }
     }
 
     private static String text(java.io.ByteArrayOutputStream buf) {
@@ -386,37 +408,47 @@ public final class Playground {
 
     /* --- report --- */
 
+    private static final Pattern CAST = Pattern.compile("cannot be cast to (?:class )?\\S*GInteraction");
+
     private static String report(Run r) {
         String out = r.out();
+        String where = r.problems() != null ? r.problems() : textProblems(out);   // a JSON array, or null
 
         if (r.timedOut())
             return err("Timed out after " + (DEADLINE_MS / 1000) + " s, or the server is busy. "
-                     + "Usually deep recursion inside a mixed choice.");
+                     + "Usually deep recursion inside a mixed choice.", "timeout", null, null);
 
         Matcher mm = MISMATCH.matcher(out);
         if (mm.find())
             return err("Module and file name differ: two module declarations?");
 
         if (out.contains("Inconsistent choice"))
-            return err("Inconsistent choice: every branch of 'choice at X' must start with X sending. "
-                     + "For a race, use 'mixed'.", "inconsistent-choice");
+            return err("Each branch of `choice at A` starts with `A` sending, all to one role. "
+                     + "For a choice two roles make, use a mixed choice.", "inconsistent-choice", out, where);
+
+        if (out.contains("Inconsistent mixed roles"))
+            return err("The right side starts with the reverse of the left's first message: for `or A -> B`, "
+                     + "`A` to `B` on the left, `B` to `A` on the right.", "mixed-roles", out, where);
 
         Matcher proj = Pattern.compile("Couldn't project to ([A-Za-z0-9_]+)").matcher(out);
         if (proj.find())
-            return err("Checks pass, but projection onto " + proj.group(1) + " fails: " + proj.group(1)
-                     + " gets the same message in two branches of a choice, then acts differently. "
-                     + "Use distinct labels.", "projection", out);
+            return err("Checks pass, but projection onto " + proj.group(1) + " fails"
+                     + (where != null ? "." : ": " + proj.group(1) + " gets the same message in two branches "
+                                             + "of a choice, then acts differently. Use distinct labels."),
+                       "projection", out, where);
 
-        if (out.contains("Cannot translate: mixed {") || out.contains("Cannot translate:"))
-            return err("A mixed choice must be last in its block: put a `continue` inside the looping branch, "
-                     + "not after the choice.", "after-mixed", out);
+        if (out.contains("Cannot translate:"))
+            return err(where != null ? "To loop, put the `continue` inside the choice, not after it."
+                                     : "A mixed choice must be last in its block: to loop, put the `continue` inside "
+                                     + "a side, not after the choice.", "after-mixed", out, where);
 
-        if (out.contains("GMixed cannot be cast to") || out.contains("GInteraction"))
-            return err("A mixed choice cannot be first in its block: put the opening message, between the "
-                     + "pair in `or X -> Y`, before it.", "mixed-first", out);
+        if (CAST.matcher(out).find())
+            return err("Each side of a mixed choice, and each branch of a choice, starts with a message.",
+                       "mixed-first", out, where);
 
         if (out.contains("NoSuchElementException"))
-            return err("Empty block: each side of a mixed choice needs an interaction.", "empty-block");
+            return err("Each side of a mixed choice, each branch and each rec needs a message.",
+                       "empty-block", out, where);
 
         Boolean wf = null, sd = null, ct = null, ba = null;
         Matcher fm = FLAG.matcher(out);
@@ -429,17 +461,16 @@ public final class Playground {
         Matcher pm = Pattern.compile("(?m)^([A-Za-z0-9_.]+): (OK|FAIL)$").matcher(out);
         if (pm.find()) protocol = pm.group(1);
 
-        if (wf != null) {                                   // rejected, with flags
-            String culprit = find(CULPRIT, out);
+        if (wf != null)                                     // rejected, with flags
             return "{\"ok\":false,\"stage\":\"validate\""
                  + ",\"protocol\":" + jsonStr(protocol)
                  + ",\"flags\":{\"WF\":" + wf + ",\"SD\":" + sd + ",\"CT\":" + ct + ",\"BA\":" + ba + "}"
-                 + (culprit == null ? "" : ",\"culprit\":" + jsonStr(culprit.trim()))
+                 + ",\"problems\":" + (where == null ? "[]" : where)
                  + ",\"raw\":" + jsonStr(out) + "}";
-        }
 
         if (r.failed())                                     // parse error or similar
-            return err(parseError(out), "parse", out);
+            return err(parseError(out), SYNTAX.matcher(out).find() ? "parse" : out.contains("ScribException") ? "scribble" : null,
+                       out, where);
 
         if (out.contains(": OK")) {                         // accepted
             StringBuilder locals = new StringBuilder("[");
@@ -458,6 +489,24 @@ public final class Playground {
         }
 
         return err("No verdict in the checker's output.", null, out);
+    }
+
+    private static final Pattern SYNTAX = Pattern.compile("(?m)^line (\\d+):(\\d+) (.+)$");
+    private static final Pattern SCRIB  = Pattern.compile("\\(line (\\d+):(\\d+)\\): ([^\\r\\n]+)");
+
+    // Without Diagnose's: the parser's and Scribble's errors, which carry a line.
+    private static String textProblems(String out) {
+        List<String> ps = new ArrayList<>();
+        Matcher m = SYNTAX.matcher(out);
+        while (m.find() && ps.size() < 20) ps.add(lineProblem("syntax", m.group(1), m.group(3)));
+        Matcher s = SCRIB.matcher(out);
+        if (ps.isEmpty() && s.find()) ps.add(lineProblem("scribble", s.group(1), s.group(3)));
+        return ps.isEmpty() ? null : "[" + String.join(",", ps) + "]";
+    }
+
+    private static String lineProblem(String kind, String line, String text) {
+        return "{\"kind\":" + jsonStr(kind) + ",\"protocol\":null,\"line\":" + line + ",\"head\":null"
+             + ",\"text\":" + jsonStr(text.trim()) + ",\"soft\":[],\"hard\":[" + line + "]}";
     }
 
     // The one actionable line.
@@ -483,6 +532,7 @@ public final class Playground {
     private static final int     ERL_MAX_FILES  = 80;
     private static final int     ERL_MAX_BYTES  = 1024 * 1024;
     private static final int     ERL_MAX_OUTPUT = 300_000;
+    private static final int     ERL_SECONDS    = 5;              // the run deadline
     private static final Pattern ERL_NAME       = Pattern.compile("[a-z][A-Za-z0-9_]{0,63}\\.(erl|hrl)");
     private static final Pattern ERL_PROTOCOL   = Pattern.compile("examples/scribble/([A-Za-z0-9_]+)\\.scr");
 
@@ -892,7 +942,7 @@ public final class Playground {
             bytes += content.getBytes(StandardCharsets.UTF_8).length;
         }
         if (bytes > ERL_MAX_BYTES) return err("Over 1 MB.");
-        int seconds = req.get("seconds") instanceof Number n ? Math.max(1, Math.min(10, n.intValue())) : 3;
+        int seconds = req.get("seconds") instanceof Number n ? Math.max(1, Math.min(ERL_SECONDS, n.intValue())) : ERL_SECONDS;
 
         if (!ERL_SLOTS.tryAcquire(15, TimeUnit.SECONDS))
             return "{\"ok\":false,\"stage\":\"busy\",\"error\":" + jsonStr("Busy. Try again in a few seconds.") + "}";
@@ -1209,11 +1259,13 @@ public final class Playground {
 
     /* --- plumbing --- */
 
-    private static String err(String message)                    { return err(message, null, null); }
-    private static String err(String message, String code)       { return err(message, code, null); }
-    private static String err(String message, String code, String raw) {
+    private static String err(String message)                    { return err(message, null, null, null); }
+    private static String err(String message, String code, String raw) { return err(message, code, raw, null); }
+    // problems: a JSON array, or null.
+    private static String err(String message, String code, String raw, String problems) {
         return "{\"ok\":false,\"stage\":\"error\",\"error\":" + jsonStr(message)
              + (code == null ? "" : ",\"code\":" + jsonStr(code))
+             + (problems == null ? "" : ",\"problems\":" + problems)
              + (raw  == null ? "" : ",\"raw\":"  + jsonStr(raw)) + "}";
     }
 

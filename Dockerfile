@@ -45,9 +45,9 @@ RUN mkdir -p /build/erlang \
       fi; \
     done
 
-COPY Playground.java nonet.c /build/pg/
+COPY Playground.java Diagnose.java nonet.c /build/pg/
 RUN mkdir -p /build/classes \
- && javac -nowarn -d /build/classes /build/pg/Playground.java \
+ && javac -nowarn -d /build/classes -cp "/build/checker:/build/jars/*" /build/pg/Playground.java /build/pg/Diagnose.java \
  && cc -O2 -static -o /build/mmst-nonet /build/pg/nonet.c
 
 # --- runtime ---

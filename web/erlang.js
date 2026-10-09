@@ -9,6 +9,7 @@
   function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
 
   var EDITS = "mmst.erl.edits", GENERATED = "mmst.erl.generated", LAST = "mmst.erl.last";
+  var SECONDS = 5;   // the server's run deadline
   function load(k){ try { return JSON.parse(sessionStorage.getItem(k) || "null"); } catch (e) { return null; } }
   function save(k, v){ try { sessionStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 
@@ -296,7 +297,7 @@
     var p = protocolLink(), h = '<div class="result"><div class="msg"><div class="t">';
     if (set.group === "examples")
       h += 'filled in</div>' + (p ? p + ': ' : '') + 'the artifact\'s OTP app, <code>' + esc(set.path) +
-           '</code>. Hand-written callbacks, generated <code>gen_</code> modules.';
+           '</code>. Filled-in callbacks, generated <code>gen_</code> modules.';
     else if (set.group === "generated")
       h += 'generated</div>' + (p ? p + ': ' : '') + '<code>' + esc(set.path) +
            '</code>. Default callbacks print each receive and choose at random.';
@@ -306,7 +307,7 @@
     h += '</div><p class="hintline"><b>Roles:</b> ' + set.roles.map(function(r, i){
       return '<span class="rc rc' + (i % 4) + '">' + esc(r) + '</span>'; }).join(", ") + '.</p>';
     if (list && !list.run) h += offNote();
-    else h += '<p class="hintline"><b>Run</b>: compile, start the roles, run for up to ' + $("erl-secs").value + ' s.' +
+    else h += '<p class="hintline"><b>Run</b>: compile, start the roles, run for up to ' + SECONDS + ' s.' +
               (list && list.jail ? ' ' + esc(list.jail) : '') + '</p>';
     show(h + '</div>');
   }
@@ -516,9 +517,8 @@
     running = true;
     busy(true);
     title("running");
-    var s = +$("erl-secs").value;
-    message("wait", "Running", set.files.length + " files, up to " + s + " s.");
-    host.post("/api/erlang/run", { seconds: s, files: set.files.map(function(f){ return { name: f.name, content: f.content }; }) })
+    message("wait", "Running", set.files.length + " files, up to " + SECONDS + " s.");
+    host.post("/api/erlang/run", { files: set.files.map(function(f){ return { name: f.name, content: f.content }; }) })
       .then(render).catch(offline)
       .then(function(){ running = false; busy(false); }, function(){ running = false; busy(false); });
   }
@@ -610,7 +610,6 @@
       $("erl-reset").addEventListener("click", function(){ reset(false); });
       $("erl-zip").addEventListener("click", download);
       $("erl-run").addEventListener("click", run);
-      $("erl-secs").addEventListener("change", function(){ if (set && !out.querySelector(".verdict")) intro(); });
       sel.addEventListener("change", function(){
         if (sel.value === "@editor") generateFromEditor();
         else if (sel.value === "editor") choose("editor");

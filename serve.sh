@@ -27,9 +27,14 @@ mmst_reexec_on_jdk "$ROOT" "$0" "$@" || exit 1          # a JDK that loads sbt's
 CP="$(mmst_classpath "$ROOT" "$HERE/.classpath")" || exit 1
 
 mkdir -p "$CLASSES"
-if [ ! -f "$CLASSES/Playground.class" ] || [ "$HERE/Playground.java" -nt "$CLASSES/Playground.class" ]; then
-  dim "Compiling Playground.java..."
-  javac -nowarn -d "$CLASSES" -cp "$CP" "$HERE/Playground.java" || exit 1
+if [ ! -f "$CLASSES/Playground.class" ] || [ "$HERE/Playground.java" -nt "$CLASSES/Playground.class" ] \
+   || [ "$HERE/Diagnose.java" -nt "$CLASSES/Playground.class" ]; then
+  dim "Compiling Playground.java, Diagnose.java..."
+  rm -f "$CLASSES"/Diagnose*.class
+  if ! javac -nowarn -d "$CLASSES" -cp "$CP" "$HERE/Playground.java" "$HERE/Diagnose.java" 2>/dev/null; then
+    dim "Diagnose.java does not compile against this checker: failures come without lines."
+    javac -nowarn -d "$CLASSES" -cp "$CP" "$HERE/Playground.java" || exit 1
+  fi
 fi
 
 EXAMPLES="$ROOT/examples/scribble"

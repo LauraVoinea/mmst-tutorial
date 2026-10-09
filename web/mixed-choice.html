@@ -20,39 +20,39 @@ body{height:auto; min-height:100vh}
 .doc ul.reading li a{color:var(--accent)}
 .doc ul.reading li b{color:var(--ink)}
 
-/* race diagram */
-.race{margin:.8rem 0 1.6rem}
-.race-tabs{display:flex; gap:.4rem; margin-bottom:.7rem}
-.race-tabs button{
+/* the two runs */
+.sides{margin:.8rem 0 1.6rem}
+.sides-tabs{display:flex; gap:.4rem; margin-bottom:.7rem}
+.sides-tabs button{
   font-family:var(--mono); font-size:.72rem; padding:.35rem .6rem; border-radius:0;
   border:1px solid var(--rule-2); background:var(--paper); cursor:pointer; color:var(--ink-2);
 }
-.race-tabs button.on{background:var(--lhs); border-color:var(--lhs); color:var(--paper)}
-.race-diagram{
+.sides-tabs button.on{background:var(--lhs); border-color:var(--lhs); color:var(--paper)}
+.sides-diagram{
   display:block; width:100%; max-width:36rem; height:auto;
   background:var(--sunk); border:1px solid var(--rule); border-radius:0;
 }
-.race-diagram .lane{stroke:var(--rule-2); stroke-width:1}
-.race-diagram .lane-label{font:700 11px var(--mono); fill:var(--ink-2)}
-.race-diagram .role-tag{font:400 9px var(--mono); fill:var(--ink-3)}
-.race-diagram .msg-label{font:400 10px var(--mono); fill:var(--ink-2)}
-.race-diagram .gc-label{font:italic 9px var(--sans); fill:var(--ink-3)}
-.race-diagram .msg{
+.sides-diagram .lane{stroke:var(--rule-2); stroke-width:1}
+.sides-diagram .lane-label{font:700 11px var(--mono); fill:var(--ink-2)}
+.sides-diagram .role-tag{font:400 9px var(--mono); fill:var(--ink-3)}
+.sides-diagram .msg-label{font:400 10px var(--mono); fill:var(--ink-2)}
+.sides-diagram .gc-label{font:italic 9px var(--sans); fill:var(--ink-3)}
+.sides-diagram .msg{
   fill:none; stroke-width:2; stroke-dasharray:1; stroke-dashoffset:1; animation:draw .5s linear forwards;
 }
-.race-diagram .msg.lhs{stroke:var(--lhs)}
-.race-diagram .msg.rhs{stroke:var(--rhs)}
-.race-diagram .msg.stale{
+.sides-diagram .msg.lhs{stroke:var(--lhs)}
+.sides-diagram .msg.rhs{stroke:var(--rhs)}
+.sides-diagram .msg.stale{
   stroke:var(--ink-3); stroke-dasharray:.08 .05; opacity:0;
   animation:staleFade .6s ease forwards; animation-delay:.3s;
 }
-.race-diagram .arrow-fill.lhs{fill:var(--lhs)}
-.race-diagram .arrow-fill.rhs{fill:var(--rhs)}
-.race-diagram .arrow-fill.stale{fill:var(--ink-3)}
-.race-diagram .commit{fill:var(--paper); stroke:var(--rule-2); stroke-width:1.5; transition:fill .3s ease, stroke .3s ease}
-.race-diagram .commit.on{fill:var(--pass); stroke:var(--pass)}
-.race-run{display:none}
-.race-run.show{display:block}
+.sides-diagram .arrow-fill.lhs{fill:var(--lhs)}
+.sides-diagram .arrow-fill.rhs{fill:var(--rhs)}
+.sides-diagram .arrow-fill.stale{fill:var(--ink-3)}
+.sides-diagram .commit{fill:var(--paper); stroke:var(--rule-2); stroke-width:1.5; transition:fill .3s ease, stroke .3s ease}
+.sides-diagram .commit.on{fill:var(--pass); stroke:var(--pass)}
+.sides-run{display:none}
+.sides-run.show{display:block}
 @keyframes draw{ to{ stroke-dashoffset:0 } }
 @keyframes staleFade{ to{ opacity:.6 } }
 </style>
@@ -78,7 +78,6 @@ body{height:auto; min-height:100vh}
 <main class="doc">
   <div class="col">
 
-    <p class="kicker">background</p>
     <h1 class="title">Mixed choice</h1>
     <p class="lede">Mixed choice in asynchronous multiparty session types: participants' views may
        diverge for a while, and can always reach a consistent state.</p>
@@ -88,7 +87,7 @@ body{height:auto; min-height:100vh}
        <code>&amp;</code> receive, <code>&#9655;</code> between the two sides of a mixed choice,
        both live at once.</p>
 
-    <h3 class="sec">beyond directed choice</h3>
+    <h3 class="sec">why mixed choice</h3>
     <p>Classical multiparty session types (<a href="https://doi.org/10.1145/1328438.1328472">Honda,
        Yoshida, Carbone, POPL 2008</a>) need <b>directed</b> choice: one named role decides, and a
        role only sends or only receives. Exceptions (<a href="https://doi.org/10.1007/978-3-540-85361-9_32">Carbone,
@@ -108,17 +107,17 @@ body{height:auto; min-height:100vh}
     TOa() from B to A;
     TOc() from B to C;
 }</pre>
-    <p>Both sides are live until someone commits, so two roles may speculate on different sides: a
-       race that classical MST rules out, permitted here and still statically checked (<a href="https://arxiv.org/html/2602.23927v2#S2.SS1">§2.1</a>).</p>
+    <p>Both sides are live until someone commits, so two roles may speculate on different sides,
+       which classical MST rules out: permitted here, and still statically checked (<a href="https://arxiv.org/html/2602.23927v2#S2.SS1">§2.1</a>).</p>
 
     <h3 class="sec">two runs</h3>
     <p><code>Timeout</code>, the paper's <a href="https://arxiv.org/html/2602.23927v2#S2.F1">Figure 1</a>: <b>B</b> follows <b>A</b> (left) or overrules it (right).</p>
-    <div class="race">
-      <div class="race-tabs">
-        <button class="race-tab on" data-run="lhs">B follows A (LHS)</button>
-        <button class="race-tab" data-run="rhs">B overrules A (RHS)</button>
+    <div class="sides">
+      <div class="sides-tabs">
+        <button class="sides-tab on" data-run="lhs">B follows A (LHS)</button>
+        <button class="sides-tab" data-run="rhs">B overrules A (RHS)</button>
       </div>
-      <svg class="race-diagram" id="raceSvg" viewBox="0 0 560 230" role="img"
+      <svg class="sides-diagram" id="sidesSvg" viewBox="0 0 560 230" role="img"
            aria-label="Two executions of the Timeout protocol between roles A, B and C">
         <defs>
           <marker id="arrow-lhs" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -142,7 +141,7 @@ body{height:auto; min-height:100vh}
         <circle class="commit" id="commit-b" cx="25" cy="120" r="5"></circle>
         <circle class="commit" id="commit-c" cx="25" cy="200" r="5"></circle>
 
-        <g class="race-run lhs show">
+        <g class="sides-run lhs show">
           <line class="msg lhs" pathLength="1" x1="60" y1="40" x2="150" y2="120" marker-end="url(#arrow-lhs)"></line>
           <text class="msg-label" x="66" y="72">a1</text>
           <line class="msg lhs" pathLength="1" x1="150" y1="40" x2="240" y2="200" marker-end="url(#arrow-lhs)"></line>
@@ -155,7 +154,7 @@ body{height:auto; min-height:100vh}
           <text class="msg-label" x="448" y="102">a5</text>
         </g>
 
-        <g class="race-run rhs">
+        <g class="sides-run rhs">
           <line class="msg rhs" pathLength="1" x1="60" y1="120" x2="150" y2="40" marker-end="url(#arrow-rhs)"></line>
           <text class="msg-label" x="66" y="72">TOa</text>
           <line class="msg rhs" pathLength="1" x1="150" y1="120" x2="240" y2="200" marker-end="url(#arrow-rhs)"></line>
@@ -181,7 +180,7 @@ body{height:auto; min-height:100vh}
     <p>The observer commits with its first action in the MC: receiving on the left, sending on the
        right. Another role commits on an action causally dependent on the observer's. Roles may
        disagree for a while; the checks guarantee they can always reach a consistent state.</p>
-    <p>In-flight messages from the losing side are <b>stale</b>. Each runtime purges them using
+    <p>In-flight messages from the side not taken are <b>stale</b>. Each runtime purges them using
        local information only, so application code never sees them: garbage collection, for
        messages (<a href="https://arxiv.org/html/2602.23927v2#S4.SS1">§4.1</a>).</p>
 
@@ -202,7 +201,7 @@ body{height:auto; min-height:100vh}
        your logic (<a href="https://arxiv.org/html/2602.23927v2#S2.SS2">§2.2</a>).</p>
 
     <h3 class="sec">further reading</h3>
-    <p>Mixed choice, <b>synchronous</b>: one step commits everyone, so these races do not arise.</p>
+    <p>Mixed choice, <b>synchronous</b>: one step commits everyone, so no one speculates and nothing goes stale.</p>
     <ul class="reading">
       <li><b>Vasconcelos, Casal, Almeida, Mordido, ESOP 2020</b>: mixed sessions, binary (<a href="https://arxiv.org/html/2602.23927v2#A1.SS0.SSS0.Px1.p1">Appendix A</a>).
         <a href="https://doi.org/10.1007/978-3-030-44914-8_26">doi.org/10.1007/978-3-030-44914-8_26</a></li>
@@ -256,7 +255,7 @@ body{height:auto; min-height:100vh}
 })();
 (function(){
   "use strict";
-  var svg = document.getElementById("raceSvg");
+  var svg = document.getElementById("sidesSvg");
   if (!svg) return;
 
   var SCHEDULE = {
@@ -267,10 +266,10 @@ body{height:auto; min-height:100vh}
 
   function play(run){
     timers.forEach(clearTimeout); timers = [];
-    Array.prototype.forEach.call(svg.querySelectorAll(".race-run"), function(g){ g.classList.remove("show"); });
+    Array.prototype.forEach.call(svg.querySelectorAll(".sides-run"), function(g){ g.classList.remove("show"); });
     Array.prototype.forEach.call(svg.querySelectorAll(".commit"), function(c){ c.classList.remove("on"); });
     void svg.getBoundingClientRect(); // reflow: replay the draw-in
-    var group = svg.querySelector(".race-run." + run);
+    var group = svg.querySelector(".sides-run." + run);
     if (group) group.classList.add("show");
     (SCHEDULE[run] || []).forEach(function(pair){
       timers.push(setTimeout(function(){
@@ -280,9 +279,9 @@ body{height:auto; min-height:100vh}
     });
   }
 
-  Array.prototype.forEach.call(document.querySelectorAll(".race-tab"), function(btn){
+  Array.prototype.forEach.call(document.querySelectorAll(".sides-tab"), function(btn){
     btn.addEventListener("click", function(){
-      Array.prototype.forEach.call(document.querySelectorAll(".race-tab"), function(b){ b.classList.remove("on"); });
+      Array.prototype.forEach.call(document.querySelectorAll(".sides-tab"), function(b){ b.classList.remove("on"); });
       btn.classList.add("on");
       play(btn.dataset.run);
     });
