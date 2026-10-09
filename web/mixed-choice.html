@@ -81,11 +81,12 @@ body{height:auto; min-height:100vh}
     <h1 class="title">Mixed choice</h1>
     <p class="lede">Mixed choice in asynchronous multiparty session types: participants' views may
        diverge for a while, and can always reach a consistent state.</p>
-
-    <h3 class="sec">projection</h3>
-    <p>One global protocol, projected onto one local type per role (<a href="https://arxiv.org/html/2602.23927v2#S4.SS2">§4.2</a>). <code>&#8853;</code> is a select
-       (output-only choice), <code>&amp;</code> a branch (input-only choice), and <code>&#9655;</code> separates
-       the left and right of a mixed choice, both live at once.</p>
+    <p class="cite">Laura Bocchi, Raymond Hu, A. Laura Voinea, Simon Thompson.
+       <a href="https://doi.org/10.1145/3798256"><i>Mixed Choice in Asynchronous Multiparty Session Types</i></a>.
+       Proc. ACM Program. Lang. 10, OOPSLA1, article 148, 2026.
+       <a href="https://doi.org/10.1145/3798256">doi.org/10.1145/3798256</a><br>
+       Extended version, with appendices: <a href="https://arxiv.org/abs/2602.23927v2">arXiv:2602.23927</a>.
+       Section links on this page go there.</p>
 
     <h3 class="sec">why mixed choice</h3>
     <p>Classical multiparty session types (<a href="https://doi.org/10.1145/1328438.1328472">Honda,
@@ -100,22 +101,29 @@ body{height:auto; min-height:100vh}
        input and output at once. Mixed choice (MC) covers them; the paper's <a href="https://arxiv.org/html/2602.23927v2#S5.T1">Table 1</a> re-expresses them.</p>
 
     <h3 class="sec">the construct</h3>
+    <p><code>Timeout</code>, the paper's <a href="https://arxiv.org/html/2602.23927v2#S2.F1">Figure 1</a>:</p>
     <pre class="code">mixed {                  // left: the default
     a1() from A to B;
+    a2() from A to C;
     a3() from B to C;
+    a4() from B to A;
+    a5() from C to A;
 } or A -&gt; B {            // right: B may overrule A
     TOa() from B to A;
     TOc() from B to C;
 }</pre>
-    <p>Both sides are live until someone commits, so two roles may speculate on different sides,
-       which classical MST rules out: permitted here, and still statically checked (<a href="https://arxiv.org/html/2602.23927v2#S2.SS1">§2.1</a>).</p>
+    <p><b>B</b>, the sender on the right, is the MC's <b>observer</b>: the one role that may overrule
+       (<a href="https://arxiv.org/html/2602.23927v2#S2.SS1">§2.1</a>). The left is the speculative default; the others learn the outcome from what
+       arrives. Until they do, both sides are live, so two roles may speculate on different sides,
+       which classical MST rules out: permitted here, and still statically checked.</p>
+    <p>A fully symmetric construct would not be statically checkable; this asymmetric one is, and
+       still expresses timeouts, cancellation, interrupts, heartbeats and graceful shutdown.</p>
 
     <h3 class="sec">two runs</h3>
-    <p><code>Timeout</code>, the paper's <a href="https://arxiv.org/html/2602.23927v2#S2.F1">Figure 1</a>: <b>B</b> follows <b>A</b> (left) or overrules it (right).</p>
     <div class="sides">
       <div class="sides-tabs">
-        <button class="sides-tab on" data-run="lhs">B follows A (LHS)</button>
-        <button class="sides-tab" data-run="rhs">B overrules A (RHS)</button>
+        <button class="sides-tab on" data-run="lhs">B follows A (left)</button>
+        <button class="sides-tab" data-run="rhs">B overrules A (right)</button>
       </div>
       <svg class="sides-diagram" id="sidesSvg" viewBox="0 0 560 230" role="img"
            aria-label="Two executions of the Timeout protocol between roles A, B and C">
@@ -160,21 +168,15 @@ body{height:auto; min-height:100vh}
           <line class="msg rhs" pathLength="1" x1="150" y1="120" x2="240" y2="200" marker-end="url(#arrow-rhs)"></line>
           <text class="msg-label" x="176" y="150">TOc</text>
           <line class="msg stale" pathLength="1" x1="80" y1="40" x2="170" y2="120" marker-end="url(#arrow-stale)"></line>
-          <text class="gc-label" x="150" y="112">a1, gc'd</text>
-          <line class="msg stale" pathLength="1" x1="180" y1="40" x2="270" y2="200" marker-end="url(#arrow-stale)"></line>
-          <text class="gc-label" x="260" y="192">a2, gc'd</text>
+          <text class="gc-label" x="144" y="108" text-anchor="end">a1, purged</text>
+          <line class="msg stale" pathLength="1" x1="110" y1="40" x2="270" y2="200" marker-end="url(#arrow-stale)"></line>
+          <text class="gc-label" x="278" y="194">a2, purged</text>
         </g>
       </svg>
     </div>
     <p class="hintline">Left: <b>B</b> commits by receiving <code>a1</code>; the others follow.
-       Right: <b>B</b> commits by sending <code>TOa</code>; <code>a1</code>, already in flight,
-       crosses it and is dropped by each runtime, using local information only.</p>
-
-    <h3 class="sec">the observer</h3>
-    <p>The sender on the right is the MC's <b>observer</b>: the one role that may overrule (<a href="https://arxiv.org/html/2602.23927v2#S2.SS1">§2.1</a>). The
-       left is the speculative default; the others learn the outcome from what arrives. A fully
-       symmetric construct would not be statically checkable; this asymmetric one is, and still
-       expresses timeouts, cancellation, interrupts, heartbeats and graceful shutdown.</p>
+       Right: <b>B</b> commits by sending <code>TOa</code>; <code>a1</code> and <code>a2</code>, already
+       in flight, are stale and purged on arrival.</p>
 
     <h3 class="sec">commitment and stale messages</h3>
     <p>The observer commits with its first action in the MC: receiving on the left, sending on the
@@ -186,19 +188,26 @@ body{height:auto; min-height:100vh}
 
     <h3 class="sec">the four checks</h3>
     <div class="checks"></div>
-    <p>One error can fail two checks: fix the first <b>FAIL</b>. A protocol can pass all four and
-       still fail projection (<a href="https://arxiv.org/html/2602.23927v2#S4.SS2">§4.2</a>, <code>Couldn't project to R</code>): the classical merge failure,
-       unrelated to MC.</p>
+    <p>One error can fail two checks: fix the first <b>FAIL</b>.</p>
+
+    <h3 class="sec">projection</h3>
+    <p>One global protocol, projected onto one local type per role (<a href="https://arxiv.org/html/2602.23927v2#S4.SS2">§4.2</a>). <code>&#8853;</code> is a select
+       (output-only choice), <code>&amp;</code> a branch (input-only choice), and <code>&#9655;</code> separates
+       the left and right of a mixed choice, both live at once.</p>
+    <p>A protocol can pass all four checks and still fail projection (<code>Couldn't project to R</code>):
+       the classical merge failure, unrelated to MC.</p>
 
     <h3 class="sec">guarantees</h3>
     <p>Asynchronous, with FIFO order between any two roles. For an aware, balanced protocol:
        <b>progress</b> (<a href="https://arxiv.org/html/2602.23927v2#S3.Thmtheorem13">Theorem 3.13</a>, <a href="https://arxiv.org/html/2602.23927v2#S3.SS3">§3.3</a>), <b>operational correspondence</b> between the global type
        and its projections, modulo stale messages (<a href="https://arxiv.org/html/2602.23927v2#S4.Thmtheorem4">Theorem 4.4</a>), and <b>orphan-message freedom</b>
        (<a href="https://arxiv.org/html/2602.23927v2#S4.Thmtheorem7">Theorem 4.7</a>, <a href="https://arxiv.org/html/2602.23927v2#S4.SS4">§4.4</a>).</p>
-    <p>The generated Erlang keeps them: per role, a <code>gen_&lt;role&gt;.erl</code>
+    <h3 class="sec">generated Erlang</h3>
+    <p>The generated Erlang keeps these guarantees: per role, a <code>gen_&lt;role&gt;.erl</code>
        <code>gen_statem</code> behaviour, correct by construction and not for editing, which handles
        commitment, switching sides and purging; and a <code>&lt;role&gt;.erl</code> template for
-       your logic (<a href="https://arxiv.org/html/2602.23927v2#S2.SS2">§2.2</a>).</p>
+       your logic (<a href="https://arxiv.org/html/2602.23927v2#S2.SS2">§2.2</a>). The playground's EFSM tab draws the state machine each
+       <code>gen_&lt;role&gt;.erl</code> implements, as in the paper's <a href="https://arxiv.org/html/2602.23927v2#S2.F2">Figure 2</a>.</p>
 
     <h3 class="sec">further reading</h3>
     <p>Mixed choice, <b>synchronous</b>: one step commits everyone, so no one speculates and nothing goes stale.</p>
@@ -219,14 +228,6 @@ body{height:auto; min-height:100vh}
         related to, not the same as, per-MC clear termination (<a href="https://arxiv.org/html/2602.23927v2#S6.p8">§6</a>).
         <a href="https://doi.org/10.1016/j.jlamp.2024.100964">doi.org/10.1016/j.jlamp.2024.100964</a></li>
     </ul>
-
-    <h3 class="sec">the paper</h3>
-    <p class="cite">Laura Bocchi, Raymond Hu, A. Laura Voinea, Simon Thompson.
-       <a href="https://doi.org/10.1145/3798256"><i>Mixed Choice in Asynchronous Multiparty Session Types</i></a>.
-       Proc. ACM Program. Lang. 10, OOPSLA1, article 148, 2026.
-       <a href="https://doi.org/10.1145/3798256">doi.org/10.1145/3798256</a><br>
-       Extended version, with appendices: <a href="https://arxiv.org/abs/2602.23927v2">arXiv:2602.23927</a>.
-       Section links on this page go there.</p>
 
     <p><a class="back" href="./">&larr; Playground</a></p>
 
