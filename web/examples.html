@@ -6,10 +6,11 @@
 <title>Examples · mMST</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23002b36'/%3E%3Cpath d='M6 9h20M6 23h20' stroke='%2393a1a1' stroke-opacity='.6' stroke-width='1.5'/%3E%3Cpath d='M9 9l14 14' stroke='%232aa198' stroke-width='3'/%3E%3Cpath d='M9 23l14-14' stroke='%23b58900' stroke-width='3'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="theme.css">
+<script src="vendor/marked.umd.js"></script>
 <script src="shared.js"></script>
 <script src="examples.js"></script>
 <style>
-/* Protocols from /api/examples; descriptions from examples.js. */
+/* Protocols from /api/examples; descriptions from text/examples.md, read by examples.js. */
 body{height:auto; min-height:100vh}
 .doc .col{max-width:48rem}
 .doc nav.jump{display:flex; flex-wrap:wrap; gap:.3rem 1.3rem; margin:-.5rem 0 .6rem; font-family:var(--mono); font-size:.74rem}
@@ -54,23 +55,7 @@ body{height:auto; min-height:100vh}
 </head>
 <body>
 
-<header>
-  <div class="brand">
-    <a class="home" href="./" title="Playground">
-      <svg width="42" height="20" viewBox="0 0 42 20" aria-hidden="true">
-      <line x1="0" y1="4" x2="42" y2="4" stroke="var(--rule-2)"></line>
-      <line x1="0" y1="16" x2="42" y2="16" stroke="var(--rule-2)"></line>
-      <line x1="8" y1="4" x2="30" y2="16" stroke="var(--lhs)" stroke-width="1.6"></line>
-      <line x1="12" y1="16" x2="34" y2="4" stroke="var(--rhs)" stroke-width="1.6"></line>
-    </svg>
-      <h1>mMST</h1>
-    </a>
-    <span class="sub">
-      <!-- <a href="mixed-choice.html">mixed choice</a> -->
-      <a href="examples.html" aria-current="page">examples</a></span>
-  </div>
-  <button class="btn icon" id="theme" title="Light / dark" aria-label="Toggle light and dark">&#9680;</button>
-</header>
+<header id="site-header"></header>
 
 <main class="doc">
   <div class="col">
@@ -152,16 +137,16 @@ body{height:auto; min-height:100vh}
     if (t) t.scrollIntoView();
   }
 
-  // Offline: descriptions only.
+  // Offline: descriptions only, grouped as in text/examples.md.
   function fromAbout(){
     return Object.keys(about).map(function(id){
-      var m = /^(\d+)-/.exec(id);
-      return { id: id, group: m ? "Exercise " + m[1] : "Examples", path: "", source: "" };
+      return { id: id, group: about[id].group || "Examples", path: "", source: "" };
     });
   }
 
-  fetch("/api/examples")
-    .then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+  var list = fetch("/api/examples")
+    .then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); });
+  E.ready.then(function(){ return list; })
     .then(function(d){ render(d.examples || [], false); },
           function(){ render(fromAbout(), true); });
 })();

@@ -4,8 +4,11 @@ module StreamCancel;
 //
 // A streaming RPC that sends one chunk and stops. Make Server send chunks
 // until Client cancels, with rec Name { ... continue Name; }. Keep all four
-// flags green. Where the continue goes matters: one obvious place gives
-// "Cannot translate: mixed {".
+// flags green.
+//
+// Then predict what fails, and for whom, check, and explain:
+//   1. the rec inside the left side, around its three messages only;
+//   2. Metrics told only about the cancel: no counted().
 
 global protocol StreamCancel(role Client, role Server, role Metrics) {
     request() from Client to Server;

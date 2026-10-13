@@ -1,9 +1,9 @@
-module Balance;
+module d;
 
 // BROKEN. No mixed choice: an ordinary directed choice.
-// r is in one branch only. Why does balance fail?
+// Predict what fails, and for whom. Then press Check, compare, and fix it.
 
-global protocol Balance(role p, role q, role r) {
+global protocol Choice(role p, role q, role r) {
     choice at p {
         a() from p to q;
         c() from q to r;

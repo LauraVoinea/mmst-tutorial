@@ -28,12 +28,16 @@ The classpath is cached in `.classpath`. Erlang runs need `erl` and `erlc` on th
 |---|---|
 | `Playground.java` | the server, on the JDK's `com.sun.net.httpserver` |
 | `Diagnose.java` | runs the checker; when it rejects a protocol, finds the lines |
-| `web/` | `index.html` (playground), `examples.html`, `mixed-choice.html`, and their scripts |
+| `web/` | `index.html` (playground), `examples.html`, `mixed-choice.html`, `plug.html` (talk slides), and their scripts |
+| `web/text/` | the pages' text, in Markdown: `mixed-choice.md`, `examples.md` (example descriptions and menu order), `plug.md` (slides) |
+| `web/header.html`, `web/footer.html` | the bars on every page; `shared.js` puts them in |
+| `web/parts/` | HTML parts that the Markdown pulls in with `<div data-include="parts/…">` |
+| `web/vendor/` | [marked](https://github.com/markedjs/marked) 18.0.14, MIT licence: renders the Markdown |
 | `mmst_run.erl` | compiles and runs a set of modules in a fresh VM; reports each role |
 | `serve.sh`, `classpath.sh` | build and run locally |
 | `Dockerfile`, `container.sh`, `nonet.c`, `render.yaml` | the container image, and Render |
-| `tutorial/exercise1`, `tutorial/exercise2` | the exercises in the menu |
-| `toolchain` | the checker, pinned at `eea778b` |
+| `tutorial/exercise1`, `tutorial/exercise2`, `tutorial/extras/knowledge-of-choice` | the exercises in the menu, and an extra set for those who finish early |
+| `toolchain` | the checker, pinned at `f5872a3` |
 
 ## API
 
@@ -108,5 +112,5 @@ off. `serve.sh` reads `MMST_SLOTS` and `MMST_ERLANG_SLOTS`.
 
 ## Security
 Requests are capped at 64 KB; checks at 15 s, 256 MB and 400 000 characters of output. Only `.scr` files
-directly in the exercise folders and `examples/scribble` are listed, by short path; no request
-chooses a file. Generated files are deleted after each response.
+directly in the exercise folders, `extras/knowledge-of-choice` and `examples/scribble` are listed, by
+short path; no request chooses a file. Generated files are deleted after each response.

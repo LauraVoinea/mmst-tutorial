@@ -1,9 +1,9 @@
-module SingleDecision;
+module b;
 
-// BROKEN.
-// Two flags fail. Why?
+// BROKEN: Timeout without TOc() from B to C.
+// Predict what fails, and for whom. Then press Check, compare, and fix it.
 
-global protocol SingleDecision(role A, role B, role C) {
+global protocol Timeout(role A, role B, role C) {
     mixed {
         a1() from A to B;
         a2() from A to C;

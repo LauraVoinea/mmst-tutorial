@@ -1,0 +1,20 @@
+<!-- The bar at the top of every page. shared.js puts it into <header id="site-header">;
+     whatever the page already has in its header (the playground's mode tabs and menus)
+     takes the place of data-slot. The current page's link gets aria-current. -->
+<div class="brand">
+  <a class="home" href="./" title="Playground">
+    <svg width="42" height="20" viewBox="0 0 42 20" aria-hidden="true">
+      <line x1="0" y1="4" x2="42" y2="4" stroke="var(--rule-2)"></line>
+      <line x1="0" y1="16" x2="42" y2="16" stroke="var(--rule-2)"></line>
+      <line x1="8" y1="4" x2="30" y2="16" stroke="var(--lhs)" stroke-width="1.6"></line>
+      <line x1="12" y1="16" x2="34" y2="4" stroke="var(--rhs)" stroke-width="1.6"></line>
+    </svg>
+    <h1>mMST</h1>
+  </a>
+  <span class="sub">
+    <!-- <a href="mixed-choice.html" title="Mixed choice and the four checks">mixed choice</a> -->
+    <a href="examples.html" title="The examples">examples</a>
+  </span>
+</div>
+<span data-slot></span>
+<button class="btn icon" id="theme" title="Light / dark" aria-label="Toggle light and dark">&#9680;</button>

@@ -143,7 +143,8 @@ public final class Playground {
 
     private static final Pattern EXERCISE_DIR = Pattern.compile("exercise(\\d{1,3})");
 
-    // Menu: each exerciseN/ folder, then examples/scribble. Only .scr files directly inside.
+    // Menu: each exerciseN/ folder, extras/knowledge-of-choice, then examples/scribble.
+    // Only .scr files directly inside.
     private static void examples(HttpExchange ex) throws IOException {
         cors(ex);
         StringBuilder sb = new StringBuilder("{\"examples\":[");
@@ -160,6 +161,10 @@ public final class Playground {
                 for (Path p : protocols(d))
                     n = entry(sb, n, k + "-" + stem(p), "Exercise " + k, shown(exercises) + d.getFileName() + "/" + p.getFileName(), p);
             }
+            Path koc = exercises.resolve("extras").resolve("knowledge-of-choice");
+            if (isDir(koc))
+                for (Path p : protocols(koc))
+                    n = entry(sb, n, stem(p), "Knowledge of choice", shown(exercises) + "extras/knowledge-of-choice/" + p.getFileName(), p);
         }
         if (isDir(artifactExamples)) {
             String where = shown(artifactExamples.getParent()) + shown(artifactExamples);
@@ -220,6 +225,7 @@ public final class Playground {
                     : p.endsWith(".css")  ? "text/css; charset=utf-8"
                     : p.endsWith(".js")   ? "text/javascript; charset=utf-8"
                     : p.endsWith(".svg")  ? "image/svg+xml"
+                    : p.endsWith(".md")   ? "text/markdown; charset=utf-8"
                     : "application/octet-stream";
         byte[] bytes = Files.readAllBytes(f);
         ex.getResponseHeaders().set("Content-Type", type);

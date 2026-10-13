@@ -79,6 +79,7 @@ header{
   padding:.4rem clamp(12px,2.5vw,24px); background:var(--bar); color:var(--bar-ink);
   border-bottom:1px solid var(--bar-rule);
 }
+#site-header:not(.ready) > *{visibility:hidden}     /* until header.html is in (shared.js) */
 .brand{display:flex; align-items:center; gap:.7rem; margin-right:auto}
 .brand h1{font-weight:700; font-size:1rem; margin:0; white-space:nowrap}
 .brand .sub{display:inline-flex; flex-wrap:wrap; gap:.2rem 1.1rem; font-size:.8rem; color:var(--bar-ink-2)}
@@ -112,7 +113,7 @@ header :focus-visible{outline-color:var(--bar-ink)}
 .brand svg{--lhs:var(--logo-lhs); --rhs:var(--logo-rhs); --rule-2:var(--logo-rule); flex:none}
 
 /* shared */
-h3.sec{
+.sec{
   font-size:.78rem; letter-spacing:.04em; text-transform:uppercase;
   color:var(--ink); font-weight:700; margin:1.7rem 0 .6rem;
 }
@@ -126,6 +127,14 @@ pre.code{
 .tok-com{color:var(--ink-3); font-style:italic}
 .tok-num{color:var(--syn-num)}
 .tok-var{color:var(--syn-var)}
+/* types (shared.js highlightTypes): roles, labels, ⊕ and &, ⊳, ✓ and ✗ */
+.tok-role{color:var(--syn-var); font-weight:700}
+.tok-label{color:var(--syn-str)}
+.tok-op{color:var(--syn-num); font-weight:700}
+.tok-mc{color:var(--rhs); font-weight:700}
+.tok-arrow{color:var(--ink-3)}
+.tok-ok{color:var(--pass); font-weight:700}
+.tok-bad{color:var(--fail); font-weight:700}
 
 /* reading pages: one column, 80 characters */
 main.doc{flex:1; padding:2.2rem clamp(16px,4vw,32px) 3rem}
@@ -133,10 +142,11 @@ main.doc{flex:1; padding:2.2rem clamp(16px,4vw,32px) 3rem}
 .doc h1.title{font-weight:700; font-size:clamp(1.5rem,3.6vw,2rem); line-height:1.15; margin:0 0 .9rem; color:var(--ink)}
 .doc .lede{font-size:1rem; color:var(--ink-2); margin:0 0 1.6rem}
 .doc p{color:var(--ink-2); margin:0 0 1rem}
-.doc p b{color:var(--ink)}
+.doc p b, .doc p strong{color:var(--ink)}
 .doc code{font-family:var(--mono); font-size:.95em; background:var(--sunk); padding:.05em .3em}
 .doc pre.code{margin:.3rem 0 1.2rem}
-.doc h3.sec{margin:2.3rem 0 .7rem}
+.doc pre code{font-size:inherit; background:none; padding:0}
+.doc .sec{margin:2.3rem 0 .7rem}
 .doc a:not(.btn){color:var(--accent); text-decoration:underline; text-underline-offset:2px}
 .doc a:not(.btn):hover{color:var(--ink)}
 

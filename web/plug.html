@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mixed choice, PLUG talk · mMST</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23002b36'/%3E%3Cpath d='M6 9h20M6 23h20' stroke='%2393a1a1' stroke-opacity='.6' stroke-width='1.5'/%3E%3Cpath d='M9 9l14 14' stroke='%232aa198' stroke-width='3'/%3E%3Cpath d='M9 23l14-14' stroke='%23b58900' stroke-width='3'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="theme.css">
+<script src="vendor/marked.umd.js"></script>
+<script src="shared.js"></script>
+<script src="sides.js"></script>
+<script src="slides.js"></script>
+<style>
+/* Slides: text in text/plug.md, engine in slides.js. Each slide is 1280 x 720, scaled to fit. */
+body{height:100vh; overflow:hidden}
+main.deck{flex:1; min-height:0; display:flex; flex-direction:column; background:var(--sunk)}
+.deck .view{flex:1; min-height:0; position:relative; overflow:hidden}
+.deck .stage{
+  position:absolute; left:50%; top:50%; width:1280px; height:720px; transform-origin:center;
+  background:var(--paper); border:1px solid var(--rule);
+}
+.deck .notes{display:none; height:26%; overflow:auto; padding:.7rem clamp(12px,2.5vw,24px);
+  border-top:1px solid var(--rule); background:var(--card); color:var(--ink-2); font-size:.95rem}
+.deck.with-notes .notes{display:block}
+.deck .notes p{margin:0 0 .5rem}
+.deck .bar{display:flex; align-items:center; gap:1rem; height:34px; padding:0 clamp(12px,2.5vw,24px);
+  border-top:1px solid var(--rule); font-size:.74rem; color:var(--ink-3)}
+.deck .progress{flex:1; height:2px; background:var(--rule)}
+.deck .progress span{display:block; height:100%; width:0; background:var(--lhs); transition:width .2s ease}
+.deck .counter{font-variant-numeric:tabular-nums; color:var(--ink-2)}
+.deck .goto{position:absolute; right:1rem; top:1rem; background:var(--card); border:1px solid var(--rule-2); padding:.3rem .6rem}
+.deck .overview{position:absolute; inset:0; overflow:auto; background:var(--paper); padding:1.2rem;
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(15rem, 1fr)); gap:.5rem; align-content:start}
+.deck .overview[hidden]{display:none}
+.deck .overview button{text-align:left; border:1px solid var(--rule); background:var(--card); color:var(--ink);
+  padding:.55rem .7rem; cursor:pointer; font-size:.82rem}
+.deck .overview button:hover{border-color:var(--ink-3)}
+.deck .overview .n{color:var(--ink-3); margin-right:.6rem}
+
+/* one slide */
+.slide{position:absolute; inset:0; display:none; flex-direction:column; padding:60px 84px 48px; overflow:hidden; color:var(--ink-2)}
+.slide.on{display:flex}
+.slide h1{font-size:54px; line-height:1.15; color:var(--ink); margin:0 0 30px}
+.slide h2{font-size:38px; line-height:1.2; color:var(--ink); margin:0 0 30px}
+.slide p, .slide li{font-size:26px; line-height:1.45}
+.slide p{margin:0 0 18px}
+.slide ul, .slide ol{margin:0 0 18px; padding-left:1.3em}
+.slide li{margin:0 0 10px}
+.slide li::marker{color:var(--ink-3)}
+.slide strong{color:var(--ink)}
+.slide em{font-style:italic}
+.slide code{font-family:var(--mono); font-size:.88em; background:var(--sunk); padding:.04em .28em}
+.slide pre{font-family:var(--mono); font-size:21px; line-height:1.5; background:var(--sunk); border:1px solid var(--rule);
+  padding:16px 22px; margin:0 0 22px; color:var(--ink-2); overflow:hidden; white-space:pre}
+.slide pre code{background:none; padding:0; font-size:inherit}
+.slide a{color:var(--accent); text-decoration:underline; text-underline-offset:3px}
+.slide .small, .slide p.small{font-size:20px; color:var(--ink-3)}
+.slide .cols{display:grid; grid-template-columns:1fr 1fr; gap:44px; align-items:start}
+.slide.title, .slide.part{justify-content:center}
+.slide.title h1{font-size:58px; max-width:1000px}
+.slide.part h1{font-size:64px; color:var(--lhs); margin:0}
+.slide .tok-ok, .slide .tok-bad{font-size:1.3em; line-height:1}
+.slide .sides{margin:0 0 18px}
+.slide .sides-diagram{max-width:860px}
+.slide .sides-tabs button{font-size:17px; padding:7px 13px}
+</style>
+</head>
+<body>
+
+<header id="site-header"></header>
+
+<main class="deck" id="deck" data-slides="text/plug.md">
+  <div class="view">
+    <div class="stage"></div>
+    <div class="overview" hidden></div>
+    <div class="goto" hidden></div>
+  </div>
+  <div class="notes" aria-live="polite"></div>
+  <div class="bar">
+    <span class="progress"><span></span></span>
+    <span class="counter"></span>
+    <span class="keys">&rarr; next &middot; &larr; back &middot; n notes &middot; o overview &middot; f full screen</span>
+  </div>
+</main>
+
+</body>
+</html>

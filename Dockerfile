@@ -4,7 +4,7 @@
 #   docker run --rm -p 8080:10000 mmst-playground
 
 # The checker commit the toolchain submodule pins.
-ARG TOOLCHAIN_COMMIT=eea778b1fd5799017a8a374352fd3328dbf8c134
+ARG TOOLCHAIN_COMMIT=f5872a33b3f9b6579fac8e867178650f702fbbcc
 
 # --- build ---
 FROM eclipse-temurin:21-jdk AS build
@@ -68,6 +68,8 @@ COPY web /app/web
 COPY mmst_run.erl container.sh /app/
 COPY tutorial/exercise1/*.scr /app/tutorial/exercise1/
 COPY tutorial/exercise2/*.scr /app/tutorial/exercise2/
+# Knowledge of choice, left out for now. With its .scr files committed:
+# COPY tutorial/extras/knowledge-of-choice/*.scr /app/tutorial/extras/knowledge-of-choice/
 RUN mkdir -p /var/lib/mmst/runs && chmod 711 /var/lib/mmst/runs \
  && chmod 755 /app/container.sh \
  && for c in tini setpriv prlimit erl erlc java mmst-nonet; do \

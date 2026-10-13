@@ -1,0 +1,17 @@
+module a;
+
+// BROKEN: Timeout without a3() from B to C.
+// Predict what fails, and for whom. Then press Check, compare, and fix it.
+// CLI, from scribble-gt-scala: ./mMST.sh <path>/exercise2/a.scr
+
+global protocol Timeout(role A, role B, role C) {
+    mixed {
+        a1() from A to B;
+        a2() from A to C;
+        a4() from B to A;
+        a5() from C to A;
+    } or A -> B {
+        TOa() from B to A;
+        TOc() from B to C;
+    }
+}

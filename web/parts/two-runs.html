@@ -1,0 +1,94 @@
+<!-- The two runs of Timeout: B follows A (left) or overrules it (right). sides.js plays
+     them. Used by text/mixed-choice.md and text/plug.md, once per page (the arrowhead
+     markers have ids). -->
+<style>
+/* the two runs */
+.sides{margin:.8rem 0 1.6rem}
+.sides-tabs{display:flex; gap:.4rem; margin-bottom:.7rem}
+.sides-tabs button{
+  font-family:var(--mono); font-size:.72rem; padding:.35rem .6rem; border-radius:0;
+  border:1px solid var(--rule-2); background:var(--paper); cursor:pointer; color:var(--ink-2);
+}
+.sides-tabs button.on{background:var(--lhs); border-color:var(--lhs); color:var(--paper)}
+.sides-diagram{
+  display:block; width:100%; max-width:36rem; height:auto;
+  background:var(--sunk); border:1px solid var(--rule); border-radius:0;
+}
+.sides-diagram .lane{stroke:var(--rule-2); stroke-width:1}
+.sides-diagram .lane-label{font:700 11px var(--mono); fill:var(--ink-2)}
+.sides-diagram .role-tag{font:400 9px var(--mono); fill:var(--ink-3)}
+.sides-diagram .msg-label{font:400 10px var(--mono); fill:var(--ink-2)}
+.sides-diagram .gc-label{font:italic 9px var(--sans); fill:var(--ink-3)}
+.sides-diagram .msg{
+  fill:none; stroke-width:2; stroke-dasharray:1; stroke-dashoffset:1; animation:draw .5s linear forwards;
+}
+.sides-diagram .msg.lhs{stroke:var(--lhs)}
+.sides-diagram .msg.rhs{stroke:var(--rhs)}
+.sides-diagram .msg.stale{
+  stroke:var(--ink-3); stroke-dasharray:.08 .05; opacity:0;
+  animation:staleFade .6s ease forwards; animation-delay:.3s;
+}
+.sides-diagram .arrow-fill.lhs{fill:var(--lhs)}
+.sides-diagram .arrow-fill.rhs{fill:var(--rhs)}
+.sides-diagram .arrow-fill.stale{fill:var(--ink-3)}
+.sides-diagram .commit{fill:var(--paper); stroke:var(--rule-2); stroke-width:1.5; transition:fill .3s ease, stroke .3s ease}
+.sides-diagram .commit.on{fill:var(--pass); stroke:var(--pass)}
+.sides-run{display:none}
+.sides-run.show{display:block}
+@keyframes draw{ to{ stroke-dashoffset:0 } }
+@keyframes staleFade{ to{ opacity:.6 } }
+</style>
+<div class="sides">
+  <div class="sides-tabs">
+    <button class="sides-tab on" data-run="lhs">B follows A (left)</button>
+    <button class="sides-tab" data-run="rhs">B overrules A (right)</button>
+  </div>
+  <svg class="sides-diagram" viewBox="0 0 560 230" role="img"
+       aria-label="Two executions of the Timeout protocol between roles A, B and C">
+    <defs>
+      <marker id="arrow-lhs" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path class="arrow-fill lhs" d="M0,0 L8,4 L0,8 z"></path>
+      </marker>
+      <marker id="arrow-rhs" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path class="arrow-fill rhs" d="M0,0 L8,4 L0,8 z"></path>
+      </marker>
+      <marker id="arrow-stale" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path class="arrow-fill stale" d="M0,0 L8,4 L0,8 z"></path>
+      </marker>
+    </defs>
+    <line class="lane" x1="40" y1="40"  x2="530" y2="40"></line>
+    <line class="lane" x1="40" y1="120" x2="530" y2="120"></line>
+    <line class="lane" x1="40" y1="200" x2="530" y2="200"></line>
+    <text class="lane-label" x="8" y="44">A</text>
+    <text class="lane-label" x="8" y="124">B</text>
+    <text class="role-tag" x="20" y="112">observer</text>
+    <text class="lane-label" x="8" y="204">C</text>
+    <circle class="commit" data-role="A" cx="25" cy="40"  r="5"></circle>
+    <circle class="commit" data-role="B" cx="25" cy="120" r="5"></circle>
+    <circle class="commit" data-role="C" cx="25" cy="200" r="5"></circle>
+
+    <g class="sides-run lhs show">
+      <line class="msg lhs" pathLength="1" x1="60" y1="40" x2="150" y2="120" marker-end="url(#arrow-lhs)"></line>
+      <text class="msg-label" x="66" y="72">a1</text>
+      <line class="msg lhs" pathLength="1" x1="150" y1="40" x2="240" y2="200" marker-end="url(#arrow-lhs)"></line>
+      <text class="msg-label" x="180" y="150">a2</text>
+      <line class="msg lhs" pathLength="1" x1="240" y1="120" x2="330" y2="200" marker-end="url(#arrow-lhs)"></line>
+      <text class="msg-label" x="258" y="172">a3</text>
+      <line class="msg lhs" pathLength="1" x1="330" y1="120" x2="420" y2="40" marker-end="url(#arrow-lhs)"></line>
+      <text class="msg-label" x="358" y="72">a4</text>
+      <line class="msg lhs" pathLength="1" x1="420" y1="200" x2="500" y2="40" marker-end="url(#arrow-lhs)"></line>
+      <text class="msg-label" x="448" y="102">a5</text>
+    </g>
+
+    <g class="sides-run rhs">
+      <line class="msg rhs" pathLength="1" x1="60" y1="120" x2="150" y2="40" marker-end="url(#arrow-rhs)"></line>
+      <text class="msg-label" x="66" y="72">TOa</text>
+      <line class="msg rhs" pathLength="1" x1="150" y1="120" x2="240" y2="200" marker-end="url(#arrow-rhs)"></line>
+      <text class="msg-label" x="176" y="150">TOc</text>
+      <line class="msg stale" pathLength="1" x1="80" y1="40" x2="170" y2="120" marker-end="url(#arrow-stale)"></line>
+      <text class="gc-label" x="144" y="108" text-anchor="end">a1, purged</text>
+      <line class="msg stale" pathLength="1" x1="110" y1="40" x2="270" y2="200" marker-end="url(#arrow-stale)"></line>
+      <text class="gc-label" x="278" y="194">a2, purged</text>
+    </g>
+  </svg>
+</div>

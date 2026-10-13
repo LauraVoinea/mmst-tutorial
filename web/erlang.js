@@ -587,6 +587,7 @@
     init: function(h){
       host = h;
       ta = $("erl-src"); hl = $("erl-hl"); out = $("erl-out"); chips = $("erl-files"); sel = $("erlsets");
+      window.MMST.lineNumbers(ta, hl);
       listed = fetch("/api/erlang/list")
         .then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
         .then(function(d){ list = d; fillMenu(); busy(false); if (set && !running && !out.querySelector(".verdict")) intro(); })
