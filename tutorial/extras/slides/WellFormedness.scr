@@ -1,0 +1,16 @@
+module WellFormedness;
+
+// Slide 22. The slide elides the rest of each side;
+// d() and e() fill in the left so that only one check fails.
+
+global protocol WellFormedness(role A, role B, role C) {
+    mixed {
+        a() from A to B;
+        b() from A to C;
+        d() from B to A;
+        e() from A to C;
+    } or A -> B {
+        c() from B to A;
+        b() from A to C;
+    }
+}

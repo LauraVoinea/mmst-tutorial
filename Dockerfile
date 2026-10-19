@@ -68,8 +68,8 @@ COPY web /app/web
 COPY mmst_run.erl container.sh /app/
 COPY tutorial/exercise1/*.scr /app/tutorial/exercise1/
 COPY tutorial/exercise2/*.scr /app/tutorial/exercise2/
-# Knowledge of choice, left out for now. With its .scr files committed:
-# COPY tutorial/extras/knowledge-of-choice/*.scr /app/tutorial/extras/knowledge-of-choice/
+COPY tutorial/exercise4/*.scr /app/tutorial/exercise4/
+COPY tutorial/extras/slides/*.scr /app/tutorial/extras/slides/
 RUN mkdir -p /var/lib/mmst/runs && chmod 711 /var/lib/mmst/runs \
  && chmod 755 /app/container.sh \
  && for c in tini setpriv prlimit erl erlc java mmst-nonet; do \

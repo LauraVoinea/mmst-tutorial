@@ -1,0 +1,12 @@
+module TwoRoleTimeout;
+
+// Slides 17 and 18: A -> B : a1 . G1  +  B -> A : a2 . G2,
+// as a mixed choice with G1 and G2 empty. B may time out instead of receiving a1().
+
+global protocol TwoRoleTimeout(role A, role B) {
+    mixed {
+        a1() from A to B;
+    } or A -> B {
+        a2() from B to A;
+    }
+}

@@ -1,0 +1,16 @@
+# The playground's container, kept running, and started again whenever Docker is.
+# Installed by deploy/update.sh.
+[Unit]
+Description=mMST playground
+Requires=docker.service
+After=docker.service
+
+[Service]
+ExecStartPre=-/usr/bin/docker rm -f mmst
+ExecStart=/bin/sh /opt/mmst/src/deploy/run.sh
+ExecStop=/usr/bin/docker stop -t 10 mmst
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target docker.service

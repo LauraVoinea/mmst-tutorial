@@ -1,0 +1,29 @@
+module AliceSpeaksFirst;
+data <erlang> "integer()" from "rt.jar" as number;
+data <erlang> "integer()" from "rt.jar" as result;
+
+// SD red, balance green -- and this one is the sharpest of the three, because
+// Alice is not ignored at all.
+//
+// On the right-hand side Alice exchanges messages WITH THE OBSERVER: she pokes
+// Srv and Srv acks. Two messages, straight to and from the role that made the
+// decision. And single-decision still fails.
+//
+// Because she speaks first. Nothing gates Alice's poke() on Srv having timed
+// out, so she can send it before the decision exists, and the ack tells her
+// only that Srv is alive. Talking to the decider is not the same as depending
+// on the decision.
+
+global protocol AliceSpeaksFirst(role Alice, role Carol, role Srv){
+    first(number) from Carol to Srv;
+    second(number) from Carol to Srv;
+    mixed{
+        sum() from Carol to Srv;
+        result_sum(result) from Srv to Carol;
+        sum_result(result) from Carol to Alice;
+    } or Carol -> Srv {
+        timeout() from Srv to Carol;
+        poke() from Alice to Srv;        // <-- Alice initiates...
+        ack() from Srv to Alice;         // <-- ...so this tells her nothing
+    }
+}

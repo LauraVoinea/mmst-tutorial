@@ -740,12 +740,14 @@ pre.raw{
   }
   modeButtons.forEach(function(b){ b.addEventListener("click", function(){ setMode(b.getAttribute("data-mode")); }); });
 
-  // Menu: the exercise folders, then the examples examples.js picks.
-  var byId = {}, sel = $("examples");
+  // Menu: the exercises, then a link to the examples page. Every protocol opens by #ex=NAME,
+  // in the menu or not: the examples page links to the others that way.
+  var byId = {}, sel = $("examples"), MORE = "examples.html";
   function fillMenu(list){
     var E = window.MMST.examples;
     list.forEach(function(x){ byId[x.id] = x; });
-    (E ? E.arrange(list, false) : [{ group: "Protocols", items: list }]).forEach(function(g){
+    (E ? E.arrange(list, false).filter(function(g){ return /^Exercise \d+$/.test(g.group); })
+       : [{ group: "Protocols", items: list }]).forEach(function(g){
       if (!g.items.length) return;
       var og = document.createElement("optgroup");
       og.label = g.group;
@@ -756,6 +758,10 @@ pre.raw{
       });
       sel.appendChild(og);
     });
+    var rule = document.createElement("option"), more = document.createElement("option");
+    rule.disabled = true; rule.textContent = "\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500";
+    more.value = MORE; more.textContent = "More on the examples page\u2026";
+    sel.appendChild(rule); sel.appendChild(more);
   }
 
   // From the menu or #ex=NAME[&view=efsm]; the hash names it until the first edit.
@@ -766,11 +772,15 @@ pre.raw{
     syncName();
     mark(null);
     sel.value = id;
+    if (sel.value !== id) sel.value = "";                 // not in the menu: show its prompt
     history.replaceState(null, "", "#ex=" + encodeURIComponent(id));
     if (VIEWS[v]) VIEWS[v](); else idle();
     return true;
   }
-  sel.addEventListener("change", function(){ if (sel.value) load(sel.value); });
+  sel.addEventListener("change", function(){
+    if (sel.value === MORE) { sel.value = ""; location.href = MORE; return; }
+    if (sel.value) load(sel.value);
+  });
   src.addEventListener("input", function(){
     if (sel.value) sel.value = "";
     if (/[#&]ex=/.test(location.hash)) history.replaceState(null, "", location.pathname + location.search);

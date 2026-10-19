@@ -1,0 +1,15 @@
+module Balance;
+
+// Slide 23. The slide's (String) from B to A needs a label: price(String).
+
+data <erlang> "string()" from "rt.jar" as String;
+
+global protocol Balance(role A, role B, role C) {
+    choice at A {
+        buy() from A to B;
+        pay() from B to C;
+    } or {
+        quote() from A to B;
+        price(String) from B to A;
+    }
+}

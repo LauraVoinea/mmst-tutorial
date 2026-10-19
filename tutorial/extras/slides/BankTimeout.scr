@@ -1,0 +1,18 @@
+module BankTimeout;
+
+// Slides 9 to 11: the bank, where S may time out.
+// S is the observer: it may overrule C with timeout().
+
+global protocol BankTimeout(role C, role S) {
+    mixed {
+        choice at C {
+            statement() from C to S;
+            sData() from S to C;
+        } or {
+            payment() from C to S;
+            pData() from C to S;
+        }
+    } or C -> S {
+        timeout() from S to C;
+    }
+}

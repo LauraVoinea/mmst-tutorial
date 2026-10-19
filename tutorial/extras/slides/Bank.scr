@@ -1,0 +1,18 @@
+module Bank;
+
+// Slides 4 and 12: the bank server as a protocol.
+// C asks for a statement or makes a payment, in a loop.
+
+global protocol Bank(role C, role S) {
+    rec Loop {
+        choice at C {
+            statement() from C to S;
+            sData() from S to C;
+            continue Loop;
+        } or {
+            payment() from C to S;
+            pData() from C to S;
+            continue Loop;
+        }
+    }
+}

@@ -36,7 +36,9 @@ The classpath is cached in `.classpath`. Erlang runs need `erl` and `erlc` on th
 | `mmst_run.erl` | compiles and runs a set of modules in a fresh VM; reports each role |
 | `serve.sh`, `classpath.sh` | build and run locally |
 | `Dockerfile`, `container.sh`, `nonet.c`, `render.yaml` | the container image, and Render |
-| `tutorial/exercise1`, `tutorial/exercise2`, `tutorial/extras/knowledge-of-choice` | the exercises in the menu, and an extra set for those who finish early |
+| `deploy/` | a server of your own: the setup for Ubuntu 24.04, the service, `mmst-update` |
+| `tutorial/exercise1`, `tutorial/exercise2`, `tutorial/exercise4` | the exercises in the menu |
+| `tutorial/extras/slides` | the protocols from the workshop's slides, on the examples page |
 | `toolchain` | the checker, pinned at `f5872a3` |
 
 ## API
@@ -46,7 +48,7 @@ The classpath is cached in `.classpath`. Erlang runs need `erl` and `erlc` on th
 | `POST /api/validate {"source"}` | flags, problems with their lines, local types |
 | `POST /api/generate {"source"}` | Erlang modules |
 | `POST /api/efsm {"source"}` | EFSM per role |
-| `GET /api/examples` | menu protocols |
+| `GET /api/examples` | the protocols for the menu and the examples page |
 | `GET /api/erlang/list`, `GET /api/erlang/files?id=` | Erlang sets |
 | `POST /api/erlang/run {"files"}` | compile, run for up to 5 s, report |
 | `GET /api/health` | `{"ok":true}` |
@@ -109,8 +111,49 @@ Erlang/OTP 27, and runs with `MMST_ERLANG=all`. `container.sh` sizes it to the c
 `MMST_DEADLINE`: ms per check, 15000, or 90000 below half a CPU. `MMST_ERLANG=off` switches runs
 off. `serve.sh` reads `MMST_SLOTS` and `MMST_ERLANG_SLOTS`.
 
+## Deploy on Linode
+
+`deploy/` runs the playground on a server of your own with Ubuntu 24.04: Docker for the
+container, Caddy in front of it for HTTPS, and a service, `mmst`, that keeps it running. On
+Linode:
+
+1. Create a Linode: Ubuntu 24.04 LTS, London or Frankfurt, Shared CPU, Linode 2 GB. Add your
+   SSH key.
+2. Pick its hostname. With a domain of your own, add an A record with the Linode's IPv4
+   address. Without one, the Linode's own name works: its reverse DNS, on the Network tab,
+   such as `192-0-2-1.ip.linodeusercontent.com`.
+3. Log in as root and run the setup, about ten minutes:
+
+   ```sh
+   curl -fsSLO https://raw.githubusercontent.com/LauraVoinea/mmst-tutorial/main/deploy/linode-setup.sh
+   bash linode-setup.sh play.example.org
+   ```
+
+The setup installs updates and turns on daily security updates, with a reboot at 03:30 UTC
+when one needs it. It adds 2 GB of swap and a firewall that lets in SSH, HTTP and HTTPS only,
+installs Docker and Caddy from Ubuntu, and turns SSH passwords off if root has a key. Then it
+builds the image from `main` on GitHub, starts the service and checks a protocol. It ends with
+the playground's first log lines, where runs should be on:
+`Each run: own user, no network, limits.` Run it again to change the hostname.
+
+| On the server | |
+|---|---|
+| `mmst-update` | set the copy in `/opt/mmst/src` to GitHub's `main`, rebuild, restart, check; `--fresh` also pulls new Erlang and Java images |
+| `journalctl -u mmst -f` | the playground's log |
+| `systemctl restart mmst` | restart it |
+| `/opt/mmst/env` | the container's variables, one `NAME=value` a line, read at each restart; `MMST_ERLANG=off` stops runs |
+
+The container gets the machine's memory less 640 MB, and `container.sh` sizes the playground
+to that: on a Linode 2 GB, one check and one run at once. For the workshop, resize the Linode
+the day before to Dedicated CPU, Dedicated 8 GB: four checks and three runs at once, about
+$0.11 an hour. Untick *Auto Resize Disk*, so that it can go back to Linode 2 GB afterwards. A
+resize reboots the Linode, and the playground starts again at the new size.
+
+No certificate: check that the hostname points at the Linode, and that a Cloud Firewall, if
+the Linode has one, lets in ports 80 and 443; then `systemctl restart caddy`.
+
 
 ## Security
 Requests are capped at 64 KB; checks at 15 s, 256 MB and 400 000 characters of output. Only `.scr` files
-directly in the exercise folders, `extras/knowledge-of-choice` and `examples/scribble` are listed, by
+directly in the exercise folders, `extras/slides` and `examples/scribble` are listed, by
 short path; no request chooses a file. Generated files are deleted after each response.

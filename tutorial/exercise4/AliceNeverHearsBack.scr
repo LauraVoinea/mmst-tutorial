@@ -1,0 +1,24 @@
+module AliceNeverHearsBack;
+data <erlang> "integer()" from "rt.jar" as number;
+data <erlang> "integer()" from "rt.jar" as result;
+
+// The mirror image: the results to Alice are deleted from the left-hand side.
+//
+// Now Alice only ever hears from anyone if Srv times out. Expect CT and BA red.
+
+global protocol AliceNeverHearsBack(role Alice, role Carol, role Srv){
+    first(number) from Carol to Srv;
+    second(number) from Carol to Srv;
+    mixed{
+        choice at Carol {
+            sum() from Carol to Srv;
+            result_sum(result) from Srv to Carol;
+        } or {
+            diff() from Carol to Srv;
+            result_diff(result) from Srv to Carol;
+        }
+    } or Carol -> Srv {
+        timeout() from Srv to Carol;
+        cancel() from Carol to Alice;
+    }
+}

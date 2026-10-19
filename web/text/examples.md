@@ -2,8 +2,8 @@
      # a group: its first paragraph introduces it.
      ## an example, by file name. A paragraph is its one-line description; a list sets fields:
        title (menu name), from (source), what, mixed choice, look, try and result.
-     Order matters: exercises and the knowledge-of-choice set appear in this order, and the
-     entries under # Examples are the menu's examples, in this order. -->
+     Order matters: the exercises and the protocols from the slides appear in this order, and
+     the entries under # Examples are the examples page's cards, in this order. -->
 
 # Exercise 1
 
@@ -45,37 +45,104 @@ CT fails: on the left, Server never hears back. Add the messages that tell Serve
 
 Valid, but stops after one chunk. Make it recursive so Server streams until Client cancels, then try the two predictions in its comments.
 
-# Knowledge of choice
+# Exercise 4
 
-For those who finish early: seven changes to `Calculator`, each explained in its comments. Srv observes; Alice has to end up knowing how it went. Predict the flags before you read the comments.
+Knowledge of choice, for those who finish early: seven changes to `Calculator`, each explained in its comments. Srv observes; Alice has to end up knowing how it went. Predict the flags before you read the comments.
 
-## AliceActsUntold
+## 4-AliceActsUntold
 
 On the right, Alice sends `note()` to Carol.
 
-## AliceSpeaksFirst
+## 4-AliceSpeaksFirst
 
 On the right, Alice pokes Srv, the observer, and Srv acks.
 
-## AliceOnlySends
+## 4-AliceOnlySends
 
 On the left, Alice only sends `note()` to Carol.
 
-## NoOneTellsAlice
+## 4-NoOneTellsAlice
 
 `Calculator` without `cancel()` to Alice.
 
-## AliceNeverHearsBack
+## 4-AliceNeverHearsBack
 
 `Calculator` without the results to Alice.
 
-## AliceCannotTell
+## 4-AliceCannotTell
 
 Both branches send Alice `done()`; only one expects her `ack()`.
 
-## SameLabelBothSides
+## 4-SameLabelBothSides
 
 Alice receives `cancel()` on both sides of the mixed choice.
+
+# From the slides
+
+The protocols on the workshop's slides, in slide order. On the slides a mixed choice is written `} or {`; here it names its observer, as the checker needs: `} or A -> B {`. Slides 20 and 27 to 29 use `1-Timeout`.
+
+## Bank
+
+- title: Bank
+- from: Slides 4, 12
+
+C asks for a statement or makes a payment, in a loop. Valid: each branch starts with its own message to S.
+
+## BankTimeout
+
+- title: Bank with a timeout
+- from: Slides 9 to 11
+
+S may overrule C with `timeout()`. **CT** fails: after `pData()`, C never hears from S. Add `ok() from S to C;` after it.
+
+## ThreeRoles
+
+- title: Three roles
+- from: Slides 14 to 16
+
+`A → B:a1 . A → C:a2 . B → C:a3`: check it, then compare its local types with the slides.
+
+## TwoRoleTimeout
+
+- title: Timeout, two roles
+- from: Slides 17, 18
+
+`A → B:a1 . G1 + B → A:a2 . G2`, with G1 and G2 empty. **CT** fails: A never learns which side was taken. Start G1 with a message from B to A.
+
+## BuyOrQuote
+
+- title: Buy or quote
+- from: Slide 21
+
+A directed choice in Scribble: A buys or asks for a quote, and B tells C. Valid.
+
+## ClearTermination
+
+- title: Clear termination
+- from: Slides 21, 24
+
+Timeout without `a3()`, as `2-a`. **CT** fails: on the left, C never hears from B.
+
+## WellFormedness
+
+- title: Well-formedness
+- from: Slide 22
+
+`b()` from A to C on both sides: committing on the right, not on the left. **WF** fails.
+
+## Balance
+
+- title: Balance
+- from: Slide 23
+
+C takes part only when A buys. **BA** fails.
+
+## SingleDecision
+
+- title: Single decision
+- from: Slides 25, 26
+
+Which side is good? On the right, C sends `TOd()` to D before hearing from B. **SD** fails. Fix: `TOc() from A to C;` after `TOa()`.
 
 # Examples
 

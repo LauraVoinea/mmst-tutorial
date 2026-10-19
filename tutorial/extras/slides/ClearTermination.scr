@@ -1,0 +1,15 @@
+module ClearTermination;
+
+// Slides 21 and 24: Timeout without a3(), as in 2-a.
+
+global protocol Timeout(role A, role B, role C) {
+    mixed {
+        a1() from A to B;
+        a2() from A to C;
+        a4() from B to A;
+        a5() from C to A;
+    } or A -> B {
+        TOa() from B to A;
+        TOc() from B to C;
+    }
+}

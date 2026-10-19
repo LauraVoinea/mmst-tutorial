@@ -1,0 +1,34 @@
+module SameLabelBothSides;
+data <erlang> "integer()" from "rt.jar" as number;
+data <erlang> "integer()" from "rt.jar" as result;
+
+// A control. This one is ACCEPTED, and it is worth showing precisely because it
+// looks like it should not be.
+//
+// Alice receives cancel() on the left-hand side AND on the right-hand side, so
+// she genuinely cannot tell which side was taken. That is fine -- she does
+// the same thing either way, namely stop. Her projection says so:
+//
+//   Alice: [Carol&{cancel(): end, diff_result(result): end} > Carol&cancel() . end]
+//
+// Knowledge of choice was never "everyone must be able to identify the branch".
+// It is "nobody may be left needing to know something they were not told."
+
+global protocol SameLabelBothSides(role Alice, role Carol, role Srv){
+    first(number) from Carol to Srv;
+    second(number) from Carol to Srv;
+    mixed{
+        choice at Carol {
+            sum() from Carol to Srv;
+            result_sum(result) from Srv to Carol;
+            cancel() from Carol to Alice;
+        } or {
+            diff() from Carol to Srv;
+            result_diff(result) from Srv to Carol;
+            diff_result(result) from Carol to Alice;
+        }
+    } or Carol -> Srv {
+        timeout() from Srv to Carol;
+        cancel() from Carol to Alice;
+    }
+}

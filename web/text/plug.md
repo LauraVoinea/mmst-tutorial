@@ -14,32 +14,23 @@ Laura Bocchi, Raymond Hu, **Laura Voinea**, Simon Thompson
 
 ---
 
-## Session types
-
-A session type describes a protocol: who sends which message to whom, and in what order.
-
-- Checked statically: an implementation that type checks follows the protocol.
-- Binary session types: two parties. 
-- **Multiparty** session types (MST): any number of roles.
-    - **Global type:** the protocol for all roles.
-    - **Local types:** one role's obligations, obtained by *projection*.
-- Typical guarantees: no communication errors, no deadlocks, and the implementation follows the protocol.
-
----
-
 ## Multiparty session types
 
-A global protocol, projected onto one local type per role; `⊕` select/send, `&` branch/receive.
+A **global type** describes a protocol for all roles: who sends which message to whom, and in what order. *Projection* gives one **local type** per role; `⊕` select/send, `&` branch/receive.
 
 ```types
 Global:  Client → Shop:order . Shop → Client:receipt . end
 ```
 
 ```types
-Client:  Shop ⊕ order . Shop & receipt . end
-Shop:    Client & order . Client ⊕ receipt . end
+Client:  Shop⊕order . Shop&receipt . end
+Shop:    Client&order . Client⊕receipt . end
 ```
 
+- Typical guarantees: no communication errors, no deadlocks, and each role follows the protocol.
+- Usually each implementation is type checked against its local type. In this talk, the protocol part of each role is generated from it instead.
+
+Note: Keep this to a minute for a PL audience. Plant two things: projection, and that our guarantees will come from generated code, not from type checking Erlang.
 
 ---
 
@@ -56,31 +47,28 @@ choice at Client {
 ```
 
 ```types
-Client:  Shop ⊕ {buy: end, cancel: end}       // a select: output only
-Shop:    Client & {buy: end, cancel: end}     // a branch: input only
+Client:  Shop⊕{buy: end, cancel: end}         // a select: output only
+Shop:    Client&{buy: end, cancel: end}       // a branch: input only
 ```
 
 ---
 
 ## A timeout example
 
-A process, say **B**, may **receive** the expected message or **send** a timeout notification.
+B may **receive** `a1`, or time out and **send** `TOa`.
+
+<div class="cols"><div>
 
 ```erlang
 receive
     {A, a1} -> normal_continuation()
 after 5000 ->
-    A ! {self(), TOa},
+    A ! {self(), 'TOa'},
     timeout_continuation()
 end.
 ```
 
-**What if A has already sent `a1`, but the message has not yet reached B?**
-
-Note: This is schematic Erlang-style code: normal_continuation/0 and timeout_continuation/0 stand for application callbacks. A is the peer PID. Scheduling and transit delays can let B's local timeout fire even though A has sent the normal message.
-
----
-## A timeout example
+</div><div>
 
 ```text
 A                               B
@@ -89,100 +77,109 @@ A                               B
 |                               |
 ```
 
-- A has sent the normal message `a1`.
-- B times out and sends `TOa` **before receiving** `a1`.
-- For a while, the two processes behave as though different branches are active.
+</div></div>
 
-**A directed choice does not describe this race.**
+- A has sent `a1`, but B times out before it arrives and sends `TOa`. For a while, A and B act on different sides of the choice.
+- **A directed choice cannot describe this: at the same point, B may receive or send.**
 
-Note: Both sends can occur before either corresponding receive; these are messages in flight, not an assertion that one endpoint has made a compatible commitment. Distinguish sending from receiving. 
+Note: Schematic Erlang: normal_continuation/0 and timeout_continuation/0 stand for application callbacks, and A is the peer PID. Scheduling and transit delays can let B's timeout fire after A has sent a1. Both sends can happen before either receive: these are messages in flight, not commitments. Distinguish sending from receiving.
 
 ---
 
 ## Inconsistency as a feature
 
-Distributed participants do not always learn about a decision simultaneously.
+Roles in a distributed system do not always learn of a decision at the same time.
 
 **The question is whether their local behaviours can still converge on one consistent outcome.**
 
-- Allow temporary disagreement about the branch being followed.
-- Rule out **conflicting commitments** to opposite branches.
-- Deal with messages sent on the branch that was not ultimately taken.
+- Allow temporary disagreement about the side being followed.
+- Rule out **conflicting commitments** to opposite sides.
+- Deal with messages sent on the side that was not taken.
 
-Note: Temporary divergence of behaviour is allowed; it is not a licence for incompatible commitments. This distinction drives the observer and commitment mechanism introduced next.
+The same shape comes up in interrupts, cancellation and exceptions, not only in timeouts.
+
+Note: Temporary divergence of behaviour is allowed; it is not a licence for incompatible commitments. This distinction drives the observer and commitment.
 
 ---
 
-## Timeout
+## From a global protocol to runnable roles
 
-```types
-A → B:a1 . A → C:a2 . B → C:a3 . B → A:a4 . C → A:a5 . end
-  ⊳  B → A:TOa . B → C:TOc . end                          
+<div class="cols"><div>
+
+```text
+      Scribble global protocol
+                 │
+         Safety checks
+         WF · SD · CT · BA
+                 │
+             Projection
+                 │
+           Local types
+                 │
+         EFSM generation
+                 │
+            Erlang code
+         gen_role + role
 ```
 
-Normal (left) behaviour:
+</div><div>
 
-```types
-A → B:a1 . A → C:a2 . B → C:a3 . B → A:a4 . C → A:a5 . end
+**Generate the protocol mechanics; let developers supply application logic.**
+
+The rest of the talk follows it from the top: a protocol with a mixed choice and what it means, the safety checks, projection, then the generated code.
+
+</div></div>
+
+Note: A map for the rest of the talk. Implementation relies on Erlang/OTP gen_statem.
+
+---
+
+## Mixed choice
+
+The timeout example as a protocol with a third role, C: in Scribble, and as a global type written **left `⊳` right**.
+
+<div class="cols"><div>
+
+```scribble
+mixed {         // left
+    a1() from A to B;
+    a2() from A to C;
+    a3() from B to C;
+    a4() from B to A;
+    a5() from C to A;
+} or A -> B {   // right
+    TOa() from B to A;
+    TOc() from B to C;
+}
 ```
 
-Timeout (right) behaviour:
+</div><div>
 
 ```types
-B → A:TOa . B → C:TOc . end
+  A → B:a1 . A → C:a2 .
+  B → C:a3 . B → A:a4 .
+  C → A:a5 . end
+⊳ B → A:TOa . B → C:TOc . end
 ```
 
-The mixed choice is written **left `⊳` right**. B is the **observer**: it can continue normally or trigger the timeout branch.
+</div></div>
 
-Note: These are the same branches as the paper's Timeout example. On the left A first sends to B and C; on the right B notifies A and C of the timeout. Explain the normal branch in one sentence, not message by message. The next slide explains why B is special.
+In `or A -> B`, B is the **observer**: it may overrule A. [Playground](./#ex=1-Timeout)
+
+Note: These are the same sides as the paper's Timeout example. On the left A first sends to B and C; on the right B notifies A and C of the timeout. Explain the left side in one sentence, not message by message. The next slide explains why B is special.
 
 ---
 
 ## The observer
 
-- The **left branch** is the default behaviour.
-- The **observer B** is the only role that can initiate the right branch.
+- The **left side** is the default behaviour.
+- The **observer B** is the only role that can initiate the right side.
 - B commits to the **left** by receiving `a1`.
 - Alternatively, B commits to the **right** by sending `TOa`.
 
-**The construct is asymmetric:** its right branch can overrule the left.
+**The construct is asymmetric:** its right side can overrule the left. That keeps it simple enough to prove progress and correspondence.
 
-Note: The mixed-choice pattern makes the direction of the race explicit: A→B on the left, B→A on the right. Contrast with symmetric mixed choice in synchronous settings. Do not imply that other roles have already committed merely because B has.
-
----
-
-## What can go wrong
-
-Roles act on different sides for a while. Without checks:
-
-- a role finishes without learning which side was taken;
-- a role never learns that the other side was taken;
-- a label commits a role in one place and not in another;
-- a role waits for a message that only one branch sends;
-- messages from the side not taken stay in queues.
-
-The first four are excluded statically, by four checks. The last is handled at run time.
-
----
-
-## Timeout in Scribble
-
-```scribble
-global protocol Timeout(role A, role B, role C) {
-    mixed {                       // left
-        a1() from A to B;
-        a2() from A to C;
-        a3() from B to C;
-        a4() from B to A;
-        a5() from C to A;
-    } or A -> B {                 // right: B overrules A
-        TOa() from B to A;
-        TOc() from B to C;
-    }
-}
-```
-
-[Playground](./#ex=1-Timeout)
+Note: `or A -> B` makes the direction explicit: A→B on the left, B→A on the right. Contrast with symmetric mixed choice in synchronous settings. Do not imply that other roles have already committed merely because B has. If asked why asymmetric: it is practical and simple, and the paper already lifts it to a more general postponed commitment.
 
 ---
 
@@ -193,16 +190,9 @@ global protocol Timeout(role A, role B, role C) {
 - Any other role commits with its first action that causally depends on the observer's.
 - Commitments only grow, and always agree with the observer.
 
----
+{.small} Definition 3.1, the committing set: on the left, the observer's first receive, then each other role's first receive from a role that has committed; on the right, each role's first action. In Timeout: `a1`, `a3`, `a4` on the left, `TOa`, `TOc` on the right.
 
-## Committing actions
-
-Definition 3.1, the committing set of a mixed choice:
-
-- on the left, the observer's first receive, and every receive of a message from a committed sender;
-- on the right, the first action of each role.
-
-Actions are identified by their labels. In Timeout: `a1`, `a3`, `a4`, `a5` on the left; `TOa`, `TOc` on the right.
+Note: Actions are identified by their labels. a2 and a5 are not committing: A sends a2 before A has committed, and when a5 reaches A, A has already committed on a4.
 
 ---
 
@@ -218,21 +208,67 @@ Note: The dots fill as each role commits. Switch between the two runs with the b
 
 ## Stale messages
 
-- On the right, `a1` and `a2` were sent on the side not taken: they are **stale**.
-- B purges `a1` when it arrives; C purges `a2`.
-- Each runtime decides this from local information only.
+- If B overrules after A has sent `a1` and `a2`, both belong to the side not taken: they are **stale**.
+- B purges `a1` when it arrives.
+- C purges `a2` if `TOc` gets there first. If `a2` arrives first, C takes it: `a2` is not committing, so C still switches on `TOc`.
+- Each role decides this from local information only.
 - In the semantics, rule [Discard] removes stale messages from a role's queue. The paper compares this to garbage collection.
+
+Note: In the run shown, TOc reaches C before a2. Until recently our generator committed C on a2, then purged TOc as stale, and C waited for ever: the committing set matters to the runtime, not only to the proofs.
 
 ---
 
-## The four checks
+## What the safety checks rule out
 
-- **WF**, well-formed: each label is committing everywhere or nowhere (Definition 3.4).
-- **SD**, single-decision: on the right, every role depends on the observer (Definition 3.9).
-- **CT**, clear-termination: on the left, a role receives a committing message before it terminates (Definition 3.9).
-- **BA**, balanced: the branches of a choice involve the same roles (Definition 3.12).
+| Without checks | Ruled out by |
+|---|---|
+| a label commits a role in one place and not in another | **WF**, well-formed: each label is committing everywhere or nowhere |
+| a role never learns that the other side was taken | **SD**, single-decision: on the right, every role depends on the observer |
+| a role finishes without learning which side was taken | **CT**, clear-termination: on the left, a role receives a committing message before it terminates |
+| a role waits for a message that only one side sends | **BA**, balanced: the sides or branches of a choice involve the same roles |
+| messages from the side not taken stay in queues | at run time: each role purges stale messages |
 
-SD and CT together are **awareness**. Theorem 3.13: an initial, aware and balanced global type enjoys **progress**.
+{.small} WF is Definition 3.4; SD and CT are Definition 3.9, together **awareness**; BA is Definition 3.12. Theorem 3.13: an initial, aware and balanced global type enjoys **progress**.
+
+Note: Plainer readings. SD: if the observer overrules, the news reaches everybody. CT: the observer reaches every other role, directly or through someone else. The flags are not independent: one deleted line can turn two red.
+
+---
+
+## Checking Timeout, then breaking it
+
+- [Timeout](./#ex=1-Timeout): all four checks pass.
+- [a](./#ex=2-a) is Timeout without `a3`; [b](./#ex=2-b) is Timeout without `TOc`.
+- **Before pressing Check: which check fails, and for whom?**
+- [c](./#ex=2-c) and [d](./#ex=2-d) make one change each too. A failing check names the mixed choice and the lines involved.
+
+Note: Ask for predictions on a and b before pressing Check. a: CT fails, for C: without a3, C never receives a committing message on the left. b: SD and BA fail, for C: nobody tells C on the right, where C no longer appears. c fails WF, and d, an ordinary choice, fails BA. The editor marks the lines.
+
+---
+
+## Projection
+
+- After the safety checks, projection gives one local type per role: [Timeout](./#ex=1-Timeout).
+- Projection keeps the usual MST conditions, for every choice. Here nothing tells Courier what Client chose:
+
+<div class="cols"><div>
+
+```scribble
+choice at Client {
+    buy() from Client to Shop;
+    ship() from Courier to Shop;
+} or {
+    cancel() from Client to Shop;
+    idle() from Courier to Shop;
+}
+```
+
+</div><div>
+
+[Check it](./#p=bW9kdWxlIE9yZGVyOwoKZ2xvYmFsIHByb3RvY29sIE9yZGVyKHJvbGUgQ2xpZW50LCByb2xlIFNob3AsIHJvbGUgQ291cmllcikgewogICAgY2hvaWNlIGF0IENsaWVudCB7CiAgICAgICAgYnV5KCkgZnJvbSBDbGllbnQgdG8gU2hvcDsKICAgICAgICBzaGlwKCkgZnJvbSBDb3VyaWVyIHRvIFNob3A7CiAgICB9IG9yIHsKICAgICAgICBjYW5jZWwoKSBmcm9tIENsaWVudCB0byBTaG9wOwogICAgICAgIGlkbGUoKSBmcm9tIENvdXJpZXIgdG8gU2hvcDsKICAgIH0KfQo): the four checks pass, but projection onto Courier fails. Courier sends in a branch before it can know which branch was taken.
+
+</div></div>
+
+Note: The safety checks do not replace projection's own conditions. The playground says: Checks pass, but projection onto Courier fails. The fix is the usual one: Client tells Courier, with buy() and cancel() from Client to Courier.
 
 ---
 
@@ -244,87 +280,31 @@ B:  A&a1 . C⊕a3 . A⊕a4 . end          ⊳  A⊕TOa . C⊕TOc . end
 C:  A&a2 . B&a3 . A⊕a5 . end          ⊳  B&TOc . end
 ```
 
-- `⊕` a select, an output-only choice; `&` a branch, an input-only choice; `⊳` separates the left and right sides.
-- A and B are not duals: B decides to time out; A has no matching action.
-
----
-
-## Local behaviour
-
-- A role runs the left side until it commits.
-- A committing receive, or the observer's own send on the right, decides its side.
-- A role may face input and output in the same state: B in its first state may receive `a1` or send `TOa`.
+- A role runs the left side until it commits. Until then, the right side's committing receive stays enabled.
+- A state may offer input and output: B may receive `a1` or send `TOa`; A may send `a1` or receive `TOa`.
+- A and B are not direct duals: A can wait for `a4` or `TOa`, but B never chooses between sending them.
 - Each role has a queue of incoming messages; stale ones are purged from it.
 
+Note: `⊕` a select, an output-only choice; `&` a branch, an input-only choice; `⊳` separates the left and right sides. The duals point is from the paper's discussion of Figure 2. Because the right side's receive stays enabled, C can take a2 and still switch on TOc.
+
 ---
 
-## Correspondence and local properties
+## Properties of the projected system
 
 For a system projected from an initial, aware and balanced global type:
 
-- **Operational correspondence** (Theorem 4.4): the global type and its projection match step for step, modulo stale messages.
-- **Local progress** (Corollary 4.6): every role that has not finished can eventually act.
-- **Orphan-message freedom** (Theorem 4.7): every message in a queue can eventually be received, unless it becomes stale.
+- **Coherence**: at no point are two roles committed to different sides of a mixed choice.
+- **Operational correspondence**, Theorem 4.4: the global type and its projection match step for step, modulo stale messages.
+- **Local progress**, Corollary 4.6: every role that has not finished can eventually act.
+- **Orphan-message freedom**, Theorem 4.7: every message in a queue can eventually be received, unless it becomes stale.
+
+Note: Coherence answers the question from Inconsistency as a feature. In the paper it appears in Section 3.3, in the proof of progress: all committed roles are committed to the same side. The paper also calls the correspondence fidelity, in Lemmas 4.1 and 4.2.
 
 ---
 
-## Protocol specification and validation
+## EFSMs and gen_statem
 
-- [Timeout](./#ex=1-Timeout): check it; all four checks pass.
-- Broken variants, one change each: [a](./#ex=2-a) and [b](./#ex=2-b) are Timeout without `a3` and without `TOc`; then [c](./#ex=2-c) and [d](./#ex=2-d).
-- A failing check names the mixed choice and the lines involved.
-
-Note: Press Check. a is Timeout without a3: CT fails, and the editor marks the lines. b fails SD and BA, c fails WF, and d, an ordinary choice, fails BA.
-
----
-
-## Global to local projection
-
-- After the checks, the local types, one per role: [Timeout](./#ex=1-Timeout).
-- A protocol can pass all four checks and still fail projection. Example: in [AMQP selective consumer](./#ex=amqp_selective_consumer), delete `process_message() from Channel to Consumer;`: nothing tells Consumer the Server's choice.
-- This is the usual merge failure of MST, not specific to mixed choice.
-
----
-
-## From a global protocol to runnable roles
-
-```text
-          Scribble global protocol
-                     │
-             Static checks
-             WF · SD · CT · BA
-                     │
-                 Projection
-                     │
-               Local types
-                     │
-             EFSM generation
-                     │
-                Erlang code
-             gen_role + role
-```
-
-**Generate the protocol mechanics; let developers supply application logic.**
-
-Note: Implementation relies on Erlang/OTP gen_statem. The checks specific to mixed choice do not obviate ordinary projection constraints.
-
----
-## Mixed choice based code generation
-
-Erlang's built-in `gen_statem` behaviour:
-
-- a generic framework to implement event-driven finite state machines, EFSMs;
-- developers customise it by writing callback functions.
-
-```
-State (S) × Event (E) → Action (A), State (S')
-```
-
-In a state S, the arrival of an event E triggers an action A, for example sending a message, and a transition to a new state S'.
-
----
-
-## EFSMs for local types
+Back to the pipeline. Each local type becomes an EFSM, an event-driven finite state machine, run by Erlang's `gen_statem`: in state S, event E triggers action A and a move to state S'.
 
 <div class="cols"><div>
 
@@ -338,17 +318,17 @@ In a state S, the arrival of an event E triggers an action A, for example sendin
 **Actions (A)**
 
 - Sending messages: `B!a1`, send message `a1` to role B.
-- Sending and switching `!*`: switch from the left side, the normal flow, to the right, timeout handling.
+- Switching `*`: moving to the right side, when sending, `A!*TOa` at B, or when receiving, `B?*TOa` at A.
 
 </div></div>
 
-Example: `B?*TOa` at role A. Timeout message `TOa` received from B triggers switching to timeout handling.
-
 [The EFSMs for Timeout](./#ex=1-Timeout&view=efsm)
+
+Note: The playground shows B's switch as τ / A!*TOa() and A's as B?*TOa(), as in the paper's Figure 2.
 
 ---
 
-## Generated code structure
+## Two modules per role
 
 The toolchain generates two Erlang modules for each role.
 
@@ -357,7 +337,7 @@ The toolchain generates two Erlang modules for each role.
 **`gen_role`**, the generic behaviour:
 
 - defines the EFSM structure;
-- handles the protocol mechanics: messages, states, mixed choice;
+- handles the protocol mechanics: messages, states, commitment, stale messages;
 - typically not edited by users.
 
 </div><div>
@@ -370,16 +350,60 @@ The toolchain generates two Erlang modules for each role.
 
 </div></div>
 
+An event arrives at `gen_role`, which asks `role` what to do, then sends, changes state, records commitment and purges stale messages.
+
 ---
 
-## Interactions between modules
+## Mixed choice, in code
 
-How `gen_role` and `role` work together:
+`gen_b.erl`, B's mixed-choice entry state, abridged:
 
-1. **Event received**: messages and internal events `τ` arrive at the `gen_role` state machine.
-2. **Delegation to callback**: `gen_role` forwards events to the callback module `role` for decision logic.
-3. **Callback response**: `role` decides on actions and returns instructions to `gen_role`.
-4. **State transition and actions**: `gen_role` executes them: it sends outgoing messages and purges stale messages from the event queue.
+```erlang
+s5(internal, {'TOa'}, Data) ->            % B may time out...
+    after_transition(CallbackModule:s5(internal, {'TOa'}, Data));
+s5(cast, {APid, {a1}, Path}, Data) ->     % ...or a1 may arrive
+    case message_status(Path, branch_path(mc1, left)) of
+      stale     -> {keep_state, Data};    % sent on the side not taken
+      ready     -> ... commit_if_taken(Next, mc1, left | right) ...;
+      not_ready -> {keep_state, Data, [postpone]}
+    end.
+```
+
+One state function, a send and a receive: in classical MST a state either sends or receives.
+
+Note: Path is the list of sides the sender was on when it sent the message. stale: the sender was on a side this role has ruled out, so the message is purged. not_ready: this role has not reached the sender's side yet, so the message is postponed. ready: the callback decides, and commit_if_taken records the side it took. On a1, B's callback may still send TOa: the EFSM edge A?a1()/A!*TOa().
+
+---
+
+## Running it
+
+[Timeout, in the playground's Erlang mode](./#mode=erlang&erl=examples/timeout): the generated `gen_` modules with filled-in callbacks.
+
+- Runs differ: the interleaving changes, and B's callback chooses at random whether to time out.
+- Some runs take the left side, some the right; every role finishes either way.
+- As long as the generated `gen_` modules are not edited, coherence is still guaranteed.
+
+Note: Check this on the deployed playground before the talk. Run it two or three times so both sides show up: B prints s6 Sending a3 on the left and s3 Sending TOc on the right. Do not promise a purge on screen: none showed in 20 runs here.
+
+---
+
+## RabbitMQ
+
+- `amqp_selective_consumer`, a module of RabbitMQ's Erlang client, follows [a protocol](./#ex=amqp_selective_consumer) with a recursive mixed choice: deliver another message, or cancel. The consumer, the channel and the server can each cancel.
+- The toolchain generates `gen_consumer` for the Consumer role. With its callbacks written as `amqp_selective_consumer.erl`, the pair replaces RabbitMQ's module, and the client's selective-consumer tests pass.
+
+Note: The paper's case study. In the artifact: README section 4.1.2; ./mMST.sh -run-erlang-examples runs these tests.
+
+---
+
+## Limits
+
+- No delegation: a role cannot hand its session to another process.
+- Projection is syntactic: it rejects some protocols that would be safe.
+- Erlang only, so far; the theory itself is not specific to Erlang.
+- Payloads are not checked: the generated code accepts any term.
+
+Note: A safe protocol projection rejects: in Calculator, rename diff_result to sum_result. Alice then gets sum_result in both branches and ends either way, but projection rejects it. The paper's Section 6 covers limitations and related work.
 
 ---
 
@@ -387,9 +411,9 @@ How `gen_role` and `role` work together:
 
 - Mixed choice in asynchronous MST: an asymmetric construct with an observer.
 - Commitment decides each role's side; stale messages are purged locally.
-- Four checks: well-formedness, awareness (single-decision and clear-termination), balance. They give progress.
-- Projection: operational correspondence modulo stale messages, and orphan-message freedom.
-- A toolchain from Scribble protocols to Erlang `gen_statem` modules.
+- Four safety checks: well-formedness; single-decision and clear-termination, together awareness; balance. They give progress.
+- Projection: coherence, operational correspondence modulo stale messages, local progress and orphan-message freedom.
+- A toolchain from Scribble protocols to Erlang `gen_statem` modules, used on RabbitMQ's client.
 
 {.small} Paper: [doi.org/10.1145/3798256][doi] · extended version: [arXiv:2602.23927][arxiv] · playground: [this site](./) · code: [scribble-gt-scala][code]
 

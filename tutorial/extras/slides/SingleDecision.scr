@@ -1,0 +1,15 @@
+module SingleDecision;
+
+// Slides 25 and 26: which side is good?
+
+global protocol SingleDecision(role A, role B, role C, role D) {
+    mixed {
+        a1() from A to B;
+        a2() from B to A;
+        a3() from A to C;
+        a4() from C to D;
+    } or A -> B {
+        TOa() from B to A;
+        TOd() from C to D;
+    }
+}

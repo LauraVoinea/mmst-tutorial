@@ -1,0 +1,14 @@
+module BuyOrQuote;
+
+// Slide 21: a directed choice in Scribble.
+// The slide's third branch is elided, so it is left out here.
+
+global protocol BuyOrQuote(role A, role B, role C) {
+    choice at A {
+        buy() from A to B;
+        pay() from B to C;
+    } or {
+        quote() from A to B;
+        null() from B to C;
+    }
+}

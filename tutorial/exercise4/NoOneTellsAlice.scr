@@ -1,0 +1,26 @@
+module NoOneTellsAlice;
+data <erlang> "integer()" from "rt.jar" as number;
+data <erlang> "integer()" from "rt.jar" as result;
+
+// Calculator, with cancel() deleted from the right-hand side.
+//
+// If Srv times out, Carol finds out -- and Alice waits for a result that is
+// never coming. Expect SD and BA red.
+
+global protocol NoOneTellsAlice(role Alice, role Carol, role Srv){
+    first(number) from Carol to Srv;
+    second(number) from Carol to Srv;
+    mixed{
+        choice at Carol {
+            sum() from Carol to Srv;
+            result_sum(result) from Srv to Carol;
+            sum_result(result) from Carol to Alice;
+        } or {
+            diff() from Carol to Srv;
+            result_diff(result) from Srv to Carol;
+            diff_result(result) from Carol to Alice;
+        }
+    } or Carol -> Srv {
+        timeout() from Srv to Carol;
+    }
+}

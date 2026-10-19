@@ -1,0 +1,10 @@
+module ThreeRoles;
+
+// Slides 14 to 16: the global type A -> B : a1 . A -> C : a2 . B -> C : a3.
+// Check it, then compare its local types with the slides.
+
+global protocol ThreeRoles(role A, role B, role C) {
+    a1() from A to B;
+    a2() from A to C;
+    a3() from B to C;
+}

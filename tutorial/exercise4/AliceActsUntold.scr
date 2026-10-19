@@ -1,0 +1,29 @@
+module AliceActsUntold;
+data <erlang> "integer()" from "rt.jar" as number;
+data <erlang> "integer()" from "rt.jar" as result;
+
+// SD red, and NOTHING ELSE. Balance is green.
+//
+// Alice is present on both sides of the mixed choice, so the two sides involve
+// the same roles and balance is satisfied -- non-vacuously. And knowledge of
+// choice still fails.
+//
+// On the right-hand side Alice sends note() to Carol. She is not waiting to
+// hear anything first, so she can send it at any moment, including before Srv
+// has decided anything at all. She acts without having been told.
+//
+// Single-decision is exactly this: on the right-hand side every role must
+// DEPEND on the observer. Being mentioned is not depending.
+
+global protocol AliceActsUntold(role Alice, role Carol, role Srv){
+    first(number) from Carol to Srv;
+    second(number) from Carol to Srv;
+    mixed{
+        sum() from Carol to Srv;
+        result_sum(result) from Srv to Carol;
+        sum_result(result) from Carol to Alice;
+    } or Carol -> Srv {
+        timeout() from Srv to Carol;
+        note() from Alice to Carol;      // <-- Alice speaks, untold
+    }
+}

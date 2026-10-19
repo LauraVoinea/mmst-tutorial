@@ -8,7 +8,7 @@
   var E = MMST.examples = {
 
     // Filled from text/examples.md:
-    featured: [],   // the entries under "# Examples", in order: the menu's examples
+    featured: [],   // the entries under "# Examples", in order: the examples page's cards
     groups: {},     // group name -> its introduction (HTML)
     about: {},      // example id -> { group, text, title, from, what, mc, look, tryIt: [try, result] }
 

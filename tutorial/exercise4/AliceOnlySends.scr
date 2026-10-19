@@ -1,0 +1,24 @@
+module AliceOnlySends;
+data <erlang> "integer()" from "rt.jar" as number;
+data <erlang> "integer()" from "rt.jar" as result;
+
+// CT red, and nothing else. Balance is green again.
+//
+// The mirror image of AliceActsUntold, on the left-hand side. Alice appears
+// there -- so the role sets match and balance holds -- but all she does is send
+// note() to Carol. Srv, the observer, never reaches her, directly or through
+// anyone else, so she can finish the protocol without ever learning that the
+// left-hand side was taken.
+
+global protocol AliceOnlySends(role Alice, role Carol, role Srv){
+    first(number) from Carol to Srv;
+    second(number) from Carol to Srv;
+    mixed{
+        sum() from Carol to Srv;
+        result_sum(result) from Srv to Carol;
+        note() from Alice to Carol;      // <-- Alice speaks, and is never told
+    } or Carol -> Srv {
+        timeout() from Srv to Carol;
+        cancel() from Carol to Alice;
+    }
+}
